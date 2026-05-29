@@ -1,8 +1,3 @@
-# lerningGDScript
-a try to code my own tick-based Idle Game
-
-
-
 # Reactor Idle -> test Projekt
 
 A small tick-based idle / reactor management game made with the Godot Engine and GDScript.
