@@ -1,31 +1,97 @@
-# Reactor Idle -> test Projekt
+# Reactor Idle
 
-A small tick-based idle / reactor management game made with the Godot Engine and GDScript.
+A prototype idle / management game inspired by reactor-building games.
+
+The player builds a power generation network, produces energy, stores it, and converts it into credits. Over time, more advanced reactor components, cooling systems, automation, and research options will unlock.
 
 ## Current Features
 
-* Tick-based energy production
-* Energy storage system
+### Resource System
+
+* Energy production
+* Energy storage
+* Credit generation
 * Manual energy selling
-* Auto sellers
-* Basic upgrade system
-* Overflow / wasted energy handling
+
+### Production
+
+* Reactor-based energy generation
+* Tick-based simulation system
+* Production upgrades
+
+### Automation
+
+* Auto Sellers
+* Seller speed upgrades
+
+### Storage
+
+* Energy storage capacity
+* Storage upgrades
+* Overflow handling
+
+### Grid Prototype
+
+* 3x3 reactor grid
+* Building placement system
+* Building selection system
+* Reactor counting directly from grid data
+
+### Upgrades
+
+* Reactor efficiency upgrades
+* Storage upgrades
+* Auto Seller upgrades
 
 ## Planned Features
 
-* Research system
-* Heat simulation
-* Water cooling
-* Reactor rods
-* Grid-based reactor layout
-* Advanced automation
-* Multiple reactor types
+### Grid Expansion
 
-## Goal
+* Larger reactor grids
+* Dynamic grid generation
+* Building removal
+* Right-click interaction
 
-The project is focused on building a modular reactor simulation with idle-game progression and infrastructure management.
+### Reactor Mechanics
 
-## Built With
+* Heat generation
+* Cooling systems
+* Water distribution
+* Reactor efficiency
+* Reactor chains and adjacency bonuses
 
-* Godot Engine
-* GDScript
+### Buildings
+
+* Advanced reactors
+* Turbines
+* Heat exchangers
+* Cooling towers
+* Storage structures
+* Automation buildings
+
+### Research
+
+* Research points
+* Technology tree
+* New building unlocks
+* Production optimization
+
+## Technical Goals
+
+The project is currently focused on building a flexible architecture that supports:
+
+* Grid-based gameplay
+* Tick-based simulation
+* Expandable building systems
+* Future research and progression mechanics
+
+## Development Status
+
+Early Prototype
+
+Current focus:
+
+* Building placement architecture
+* Grid systems
+* Core gameplay loop
+* Automation and progression systems
