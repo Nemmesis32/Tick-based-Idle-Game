@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://ptxdn8dr2et7"]
 
-[ext_resource type="Script" uid="uid://s8k8kon1r0pc" path="res://scenes/control.gd" id="1_5p55f"]
+[ext_resource type="Script" uid="uid://s8k8kon1r0pc" path="res://scripts/control.gd" id="1_5p55f"]
 
 [node name="Control" type="Control" unique_id=1095186341]
 layout_mode = 3
@@ -43,18 +43,11 @@ text = "Gnerate Energy"
 layout_mode = 2
 
 [node name="reactor" type="Label" parent="MarginContainer/Main-VBoxContainer/production" unique_id=1203563907]
-visible = false
 layout_mode = 2
 
-[node name="mini reactor" type="Button" parent="MarginContainer/Main-VBoxContainer/production" unique_id=130125468]
+[node name="Wind_select" type="Button" parent="MarginContainer/Main-VBoxContainer/production" unique_id=2018201195]
 layout_mode = 2
-tooltip_text = "Mini Reactor 
-
-Produces energy every tick
-Cost: 10 Credits
-Base Energy: 1"
-text = "Mini Reactor
-"
+text = "Wind Turbine"
 
 [node name="Reactor_select" type="Button" parent="MarginContainer/Main-VBoxContainer/production" unique_id=472047590]
 layout_mode = 2
@@ -99,7 +92,7 @@ autostart = true
 
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/resources/Sell Energy" to="." method="_on_sell_energy_pressed"]
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/resources/generate Energy" to="." method="_on_button_pressed"]
-[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/mini reactor" to="." method="_on_windmill_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Wind_select" to="." method="_on_wind_select_pressed"]
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Reactor_select" to="." method="_on_reactor_select_pressed"]
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Water_select" to="." method="_on_water_select_pressed"]
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/autoseller/BuyAutoSeller" to="." method="_on_buy_auto_seller_pressed"]
