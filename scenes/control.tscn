@@ -1,0 +1,109 @@
+[gd_scene format=3 uid="uid://ptxdn8dr2et7"]
+
+[ext_resource type="Script" uid="uid://s8k8kon1r0pc" path="res://scenes/control.gd" id="1_5p55f"]
+
+[node name="Control" type="Control" unique_id=1095186341]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 48.0
+offset_top = 50.0
+offset_right = 48.0
+offset_bottom = 50.0
+script = ExtResource("1_5p55f")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=657406699]
+layout_mode = 0
+offset_left = -47.0
+offset_top = -50.0
+offset_right = 128.0
+offset_bottom = 346.0
+
+[node name="Main-VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1898798346]
+layout_mode = 2
+
+[node name="resources" type="VBoxContainer" parent="MarginContainer/Main-VBoxContainer" unique_id=1981661231]
+layout_mode = 2
+
+[node name="Credits" type="Label" parent="MarginContainer/Main-VBoxContainer/resources" unique_id=1018224586]
+layout_mode = 2
+
+[node name="EnergyLabel" type="Label" parent="MarginContainer/Main-VBoxContainer/resources" unique_id=391780645]
+layout_mode = 2
+text = "Energy: 0"
+
+[node name="Sell Energy" type="Button" parent="MarginContainer/Main-VBoxContainer/resources" unique_id=1499531798]
+layout_mode = 2
+text = "Sell Energy"
+
+[node name="generate Energy" type="Button" parent="MarginContainer/Main-VBoxContainer/resources" unique_id=1073086721]
+layout_mode = 2
+text = "Gnerate Energy"
+
+[node name="production" type="VBoxContainer" parent="MarginContainer/Main-VBoxContainer" unique_id=2095246831]
+layout_mode = 2
+
+[node name="reactor" type="Label" parent="MarginContainer/Main-VBoxContainer/production" unique_id=1203563907]
+visible = false
+layout_mode = 2
+
+[node name="mini reactor" type="Button" parent="MarginContainer/Main-VBoxContainer/production" unique_id=130125468]
+layout_mode = 2
+tooltip_text = "Mini Reactor 
+
+Produces energy every tick
+Cost: 10 Credits
+Base Energy: 1"
+text = "Mini Reactor
+"
+
+[node name="Reactor_select" type="Button" parent="MarginContainer/Main-VBoxContainer/production" unique_id=472047590]
+layout_mode = 2
+text = "Type 1 reactor"
+
+[node name="Water_select" type="Button" parent="MarginContainer/Main-VBoxContainer/production" unique_id=747268496]
+layout_mode = 2
+text = "Type 1 Water"
+
+[node name="autoseller" type="VBoxContainer" parent="MarginContainer/Main-VBoxContainer" unique_id=32657313]
+layout_mode = 2
+
+[node name="AutoSellerLabel" type="Label" parent="MarginContainer/Main-VBoxContainer/autoseller" unique_id=603950081]
+layout_mode = 2
+
+[node name="BuyAutoSeller" type="Button" parent="MarginContainer/Main-VBoxContainer/autoseller" unique_id=723765774]
+layout_mode = 2
+text = "Buy AutoSeller"
+
+[node name="upgrades" type="VBoxContainer" parent="MarginContainer/Main-VBoxContainer" unique_id=1663094964]
+layout_mode = 2
+
+[node name="SellerUpgrade" type="Button" parent="MarginContainer/Main-VBoxContainer/upgrades" unique_id=1990457322]
+layout_mode = 2
+text = "Upgrade Seller "
+
+[node name="StorageUpgrade" type="Button" parent="MarginContainer/Main-VBoxContainer/upgrades" unique_id=1608929700]
+layout_mode = 2
+text = "Upgrade Storage
+"
+
+[node name="ReactorUpgrade" type="Button" parent="MarginContainer/Main-VBoxContainer/upgrades" unique_id=569145693]
+layout_mode = 2
+text = "Upgrade Reactor"
+
+[node name="ReactorGrid" type="GridContainer" parent="MarginContainer/Main-VBoxContainer" unique_id=1538158283]
+layout_mode = 2
+columns = 3
+
+[node name="TickTimer" type="Timer" parent="." unique_id=609982531]
+autostart = true
+
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/resources/Sell Energy" to="." method="_on_sell_energy_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/resources/generate Energy" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/mini reactor" to="." method="_on_windmill_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Reactor_select" to="." method="_on_reactor_select_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Water_select" to="." method="_on_water_select_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/autoseller/BuyAutoSeller" to="." method="_on_buy_auto_seller_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/upgrades/SellerUpgrade" to="." method="_on_seller_upgrade_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/upgrades/StorageUpgrade" to="." method="_on_storage_upgrade_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/upgrades/ReactorUpgrade" to="." method="_on_reactor_upgrade_pressed"]
+[connection signal="timeout" from="TickTimer" to="." method="_on_tick_timer_timeout"]
