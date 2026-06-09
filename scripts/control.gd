@@ -1,5 +1,13 @@
 extends Control
 
+const DIRECTIONS = [
+	Vector2i(0, -1), # oben
+	Vector2i(1, 0),  # rechts
+	Vector2i(0, 1),  # unten
+	Vector2i(-1, 0)  # links
+]
+
+
 var selected_building : BuildingDefinition
 
 var reactor_grid = []
@@ -17,13 +25,6 @@ var max_storage = 100
 
 var credits = 100 
 
-var reactor_upgrade_level = 0 
-var storage_upgrade_level = 0 
-var seller_upgrade_level = 0 
-
-var reactor_upgrade_cost = 100 
-var storage_upgrade_cost = 75
-var seller_upgrade_cost = 125
 
 var wind_definition : BuildingDefinition
 var reactor_definition : BuildingDefinition
@@ -84,6 +85,53 @@ func build_grid():
 
 		reactor_grid_container.add_child(button)
 
+
+func index_to_coords(index: int) -> Vector2i:
+
+	var x = index % grid_width
+	@warning_ignore("integer_division")
+	var y = int(index / grid_width)
+
+	return Vector2i(x, y)
+
+func coords_to_index(x: int, y: int) -> int:
+
+	return y * grid_width + x
+
+
+
+func get_neighbor_indices(index: int) -> Array[int]:
+
+	var neighbors : Array[int] = []
+
+	var pos = index_to_coords(index)
+
+	for dir in DIRECTIONS:
+
+		var check_pos = pos + dir
+
+		if check_pos.x < 0:
+			continue
+
+		if check_pos.y < 0:
+			continue
+
+		if check_pos.x >= grid_width:
+			continue
+
+		if check_pos.y >= grid_height:
+			continue
+
+		neighbors.append(
+			coords_to_index(
+				check_pos.x,
+				check_pos.y
+			)
+		)
+
+	return neighbors
+
+
 func refresh_grid_visuals():
 
 	var buttons = reactor_grid_container.get_children()
@@ -120,7 +168,7 @@ func _on_grid_button_input(
 
 	var index = button.get_meta("grid_index")
 
-	handle_grid_click(event, index, button)
+	handle_grid_click(event, index)
 
 
 
@@ -176,7 +224,7 @@ func get_total_energy_production() -> float:
 	return total
 
 
-func place_building(index: int, button: Button) -> void:
+func place_building(index: int) -> void:
 	
 	if reactor_grid[index] != null:
 		return
@@ -189,15 +237,18 @@ func place_building(index: int, button: Button) -> void:
 	var building = Building.new(selected_building)
 
 	reactor_grid[index] = building
-
+	
+	print(get_neighbor_indices(index))
+	
 	refresh_grid_visuals()
 	update_ui()
+
+
 
 
 func handle_grid_click(
 	event: InputEvent,
 	index: int,
-	button: Button
 ) -> void:
 
 	if event is InputEventMouseButton:
@@ -205,13 +256,13 @@ func handle_grid_click(
 		if event.pressed:
 
 			if event.button_index == MOUSE_BUTTON_LEFT:
-				place_building(index, button)
+				place_building(index,)
 
 			elif event.button_index == MOUSE_BUTTON_RIGHT:
-				remove_building(index, button)
+				remove_building(index)
 
 
-func remove_building(index: int, button: Button) -> void:
+func remove_building(index: int) -> void:
 
 	if reactor_grid[index] == null:
 		return
@@ -243,37 +294,6 @@ func _on_buy_auto_seller_pressed() -> void:
 		credits -= auto_seller_cost
 		auto_sellers += 1
 		update_ui()
-
-#func _on_reactor_upgrade_pressed() -> void:
-#	if credits >= reactor_upgrade_cost:
-#		credits -= reactor_upgrade_cost
-#		reactor_upgrade_level += 1
-#		reactor_production += 1
-#		
-#		reactor_upgrade_cost += 100
-#		
-#		update_ui()
-
-#func _on_storage_upgrade_pressed() -> void:
-#	if credits >= storage_upgrade_cost:
-#		credits -= storage_upgrade_cost
-#		storage_upgrade_level += 1
-#		max_storage += 50
-#		
-#		storage_upgrade_cost += 75
-#		
-#		update_ui()
-
-#func _on_seller_upgrade_pressed() -> void:
-#	if credits >= seller_upgrade_cost:
-#		credits -= seller_upgrade_cost
-#		seller_upgrade_level += 1 
-#		auto_seller_speed += 5 
-#		
-#		seller_upgrade_cost += 75
-		
-#		update_ui()
-
 
 
 func update_ui():
