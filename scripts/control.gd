@@ -23,7 +23,7 @@ var auto_seller_speed = 5
 var stored_energy = 0
 var max_storage = 100
 
-var credits = 100 
+var credits = 1000000 
 
 
 var wind_definition : BuildingDefinition
@@ -132,6 +132,63 @@ func get_neighbor_indices(index: int) -> Array[int]:
 	return neighbors
 
 
+func process_heat():
+
+	for i in range(reactor_grid.size()):
+
+		var building = reactor_grid[i]
+
+		if building == null:
+			continue
+
+		if building.definition.heat_production <= 0:
+			continue
+
+		var neighbors = get_neighbor_indices(i)
+
+		var valid_neighbors = []
+
+		for neighbor_index in neighbors:
+
+			var neighbor = reactor_grid[neighbor_index]
+
+			if neighbor == null:
+				continue
+
+			valid_neighbors.append(neighbor_index)
+
+			if valid_neighbors.is_empty():
+				building.current_heat += building.definition.heat_production
+				continue
+
+		var heat_share = (
+			building.definition.heat_production
+			/ valid_neighbors.size()
+		)
+
+		for neighbor_index in valid_neighbors:
+
+			var neighbor = reactor_grid[neighbor_index]
+
+			neighbor.current_heat += heat_share
+
+			print(
+				building.definition.name,
+				" -> ",
+				neighbor.definition.name,
+				" : ",
+				heat_share,
+				" Heat"
+			)
+
+			print(
+				neighbor.definition.name,
+				" current_heat = ",
+				neighbor.current_heat
+			)
+
+
+
 func refresh_grid_visuals():
 
 	var buttons = reactor_grid_container.get_children()
@@ -180,6 +237,9 @@ func _on_sell_energy_pressed() -> void:
 
 func _on_tick_timer_timeout() -> void:
 
+
+	#Heat at Tick
+	process_heat()
 	# Energieproduktion berechnen
 	var produced_energy = get_total_energy_production()
 	# Verkaufskapazität berechnen
@@ -281,6 +341,8 @@ func _on_reactor_select_pressed() -> void:
 func _on_water_select_pressed() -> void:
 	selected_building = water_definition
 
+func _on_generator_select_pressed() -> void:
+	selected_building = generator_definition
 
 
 func _on_button_pressed() -> void:
