@@ -61,6 +61,10 @@ text = "Type 1 Water"
 layout_mode = 2
 text = "Generator Type I"
 
+[node name="Water_Pipe_select" type="Button" parent="MarginContainer/Main-VBoxContainer/production" unique_id=147656954]
+layout_mode = 2
+text = "Water Pipe"
+
 [node name="autoseller" type="VBoxContainer" parent="MarginContainer/Main-VBoxContainer" unique_id=32657313]
 layout_mode = 2
 
@@ -84,5 +88,6 @@ autostart = true
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Reactor_select" to="." method="_on_reactor_select_pressed"]
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Water_select" to="." method="_on_water_select_pressed"]
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Generator_select" to="." method="_on_generator_select_pressed"]
+[connection signal="pressed" from="MarginContainer/Main-VBoxContainer/production/Water_Pipe_select" to="." method="_on_water_pipe_select_pressed"]
 [connection signal="pressed" from="MarginContainer/Main-VBoxContainer/autoseller/BuyAutoSeller" to="." method="_on_buy_auto_seller_pressed"]
 [connection signal="timeout" from="TickTimer" to="." method="_on_tick_timer_timeout"]
