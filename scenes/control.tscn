@@ -48,6 +48,7 @@ custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/RootVbox/HeaderRow/StatsBox" unique_id=1876104959]
+custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 
 [node name="Credits" type="Label" parent="MarginContainer/RootVbox/HeaderRow/StatsBox/VBoxContainer" unique_id=1018224586]
@@ -112,38 +113,53 @@ text = "Fast"
 [node name="MainArea" type="HBoxContainer" parent="MarginContainer/RootVbox" unique_id=1345522728]
 layout_mode = 2
 
-[node name="ComponentsPanel" type="PanelContainer" parent="MarginContainer/RootVbox/MainArea" unique_id=2088900440]
+[node name="ComponentsPanel" type="VBoxContainer" parent="MarginContainer/RootVbox/MainArea" unique_id=1759795563]
+custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 
 [node name="ComponentsContent" type="VBoxContainer" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel" unique_id=1640284120]
 layout_mode = 2
 
-[node name="Wind_select" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent" unique_id=2018201195]
+[node name="CategoryTabs" type="GridContainer" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent" unique_id=1852605993]
 layout_mode = 2
-text = "Wind Turbine"
+columns = 3
 
-[node name="Reactor_select" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent" unique_id=472047590]
+[node name="Reaktoren" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/CategoryTabs" unique_id=520772074]
 layout_mode = 2
-text = "Reaktor I"
+text = "Reaktoren"
 
-[node name="Water_select" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent" unique_id=747268496]
+[node name="Generatoren" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/CategoryTabs" unique_id=1522085298]
 layout_mode = 2
-text = " Water Pump"
+text = "Generatoren"
 
-[node name="Generator_select" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent" unique_id=433873461]
+[node name="Hitze" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/CategoryTabs" unique_id=1456320242]
 layout_mode = 2
-text = "Generator  I"
+text = "Hitze"
 
-[node name="Water_Pipe_select" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent" unique_id=147656954]
+[node name="Wasser" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/CategoryTabs" unique_id=1755517947]
 layout_mode = 2
-text = "Water Pipe"
+text = "Wasser"
 
-[node name="Heat_pipe_select" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent" unique_id=1976096597]
+[node name="Verkauf" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/CategoryTabs" unique_id=166624023]
 layout_mode = 2
-text = "Heat Pipe"
+text = "Verkauf"
+
+[node name="Forschung" type="Button" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/CategoryTabs" unique_id=1389939043]
+layout_mode = 2
+text = "Forschung"
+
+[node name="BuildingList" type="VBoxContainer" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel" unique_id=572852001]
+layout_mode = 2
+
+[node name="TooltipBox" type="PanelContainer" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel" unique_id=1552285480]
+layout_mode = 2
+
+[node name="TooltipLabel" type="Label" parent="MarginContainer/RootVbox/MainArea/ComponentsPanel/TooltipBox" unique_id=1211893400]
+layout_mode = 2
 
 [node name="GridPanel" type="PanelContainer" parent="MarginContainer/RootVbox/MainArea" unique_id=207093383]
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="ReactorGrid" type="GridContainer" parent="MarginContainer/RootVbox/MainArea/GridPanel" unique_id=1538158283]
 layout_mode = 2
@@ -153,10 +169,4 @@ columns = 3
 autostart = true
 
 [connection signal="pressed" from="MarginContainer/RootVbox/HeaderRow/StatsBox/VBoxContainer/Sell Energy" to="." method="_on_sell_energy_pressed"]
-[connection signal="pressed" from="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/Wind_select" to="." method="_on_wind_select_pressed"]
-[connection signal="pressed" from="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/Reactor_select" to="." method="_on_reactor_select_pressed"]
-[connection signal="pressed" from="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/Water_select" to="." method="_on_water_select_pressed"]
-[connection signal="pressed" from="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/Generator_select" to="." method="_on_generator_select_pressed"]
-[connection signal="pressed" from="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/Water_Pipe_select" to="." method="_on_water_pipe_select_pressed"]
-[connection signal="pressed" from="MarginContainer/RootVbox/MainArea/ComponentsPanel/ComponentsContent/Heat_pipe_select" to="." method="_on_heat_pipe_select_pressed"]
 [connection signal="timeout" from="TickTimer" to="." method="_on_tick_timer_timeout"]

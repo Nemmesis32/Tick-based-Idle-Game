@@ -1,10 +1,8 @@
 extends RefCounted
-
 class_name BuildingDefinition
 
 enum type {
 	NONE,
-	
 	SOLAR_CELL,
 	COAL_BURNER,
 	GAS_BURNER,
@@ -22,27 +20,26 @@ enum type {
 	HEAT_PIPE,
 }
 
+var tags : Array = []
 var building_type : type = type.NONE
-
 var display_name : String = ""
-var cost : int = 0
+var cost : BigNumber = BigNumber.from_float(0.0)
 
 # Heat
-var heat_production : float = 0.0
-var max_heat : float = 0.0
+var heat_production : BigNumber = BigNumber.from_float(0.0)
+var max_heat : BigNumber = BigNumber.from_float(0.0)
 var heat_transfer_rate : float = 0.0
 
 # Water
-var water_production : float = 0.0
-var max_water : float = 0.0
+var water_production : BigNumber = BigNumber.from_float(0.0)
+var max_water : BigNumber = BigNumber.from_float(0.0)
 var water_transfer_rate : float = 0.0
-var water_consumption : float = 0.0
-var water_boost_amount : float = 0.0
-
+var water_consumption : BigNumber = BigNumber.from_float(0.0)
+var water_boost_amount : BigNumber = BigNumber.from_float(0.0)
 
 # Energy
-var energy_production : float = 0.0
-var energy_processing : float = 0.0
+var energy_production : BigNumber = BigNumber.from_float(0.0)
+var energy_processing : BigNumber = BigNumber.from_float(0.0)
 
 # Lifetime
-var lifespan : int = - 1
+var lifespan : int = -1
