@@ -18,7 +18,7 @@ var grid_height = 15
 var stored_energy : BigNumber = BigNumber.from_float(0.0)
 var max_storage : BigNumber = BigNumber.from_float(100.0)
 
-var credits : BigNumber = BigNumber.from_float(50000000.0)
+var credits : BigNumber = BigNumber.from_float(5000000000000000.0)
 
 var building_categories = {
 	"Reaktoren": ["solar_cell", "coal_burner", "gas_burner",

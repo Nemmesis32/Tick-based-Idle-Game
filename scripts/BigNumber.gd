@@ -11,6 +11,13 @@ const SUFFIXES = [
 	"Vg"
 ]
 
+static func from_notation(m: float, e: int) -> BigNumber:
+	var result = BigNumber.new()
+	result.mantissa = m
+	result.exponent = e
+	result._normalize()
+	return result
+
 
 func _init(m: float = 0.0, e: int = 0):
 	mantissa = m
@@ -167,7 +174,14 @@ func to_display_string() -> String:
 
 	if exponent < 3:
 		var value = mantissa * pow(10.0, exponent)
-		return "%.1f" % value
+		# Auch für kleine Zahlen: nur nötige Nachkommastellen
+		if int(value) == value:
+			return "%d" % int(value)
+		elif int(value * 10) == value * 10:
+			return "%.1f" % value
+		else:
+			return "%.2f" % value
+
 	@warning_ignore("integer_division")
 	var suffix_index = exponent / 3
 	var remainder = exponent % 3
@@ -178,4 +192,10 @@ func to_display_string() -> String:
 	var display_value = mantissa * pow(10.0, remainder)
 	var suffix = SUFFIXES[suffix_index]
 
-	return "%.2f%s" % [display_value, suffix]
+	# Intelligente Nachkommastellen
+	if int(display_value) == display_value:
+		return "%d%s" % [int(display_value), suffix]
+	elif int(display_value * 10) == display_value * 10:
+		return "%.1f%s" % [display_value, suffix]
+	else:
+		return "%.2f%s" % [display_value, suffix]
