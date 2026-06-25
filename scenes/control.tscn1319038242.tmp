@@ -168,17 +168,15 @@ columns = 3
 
 [node name="UpgradePanel" type="PanelContainer" parent="MarginContainer/RootVbox" unique_id=1506598632]
 visible = false
-custom_minimum_size = Vector2(1920, 1080)
+custom_minimum_size = Vector2(400, 600)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_horizontal = 3
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/RootVbox/UpgradePanel" unique_id=10500708]
 layout_mode = 2
 
 [node name="UpgradeList" type="VBoxContainer" parent="MarginContainer/RootVbox/UpgradePanel/ScrollContainer" unique_id=1815885015]
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
 
 [node name="TickTimer" type="Timer" parent="." unique_id=609982531]
 autostart = true
