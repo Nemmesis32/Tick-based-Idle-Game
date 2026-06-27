@@ -1,6 +1,6 @@
 # 🔬 Reactor Idle – GDScript Remake
 
-Ein tick-basiertes Idle-Strategie-Spiel inspiriert von [Reactor Idle](https://grestgames.itch.io/reactor-idle), gebaut mit der **Godot Engine** und **GDScript**.
+Ein tick-basiertes Idle-Strategie-Spiel inspiriert von [Reactor Idle](https://reactoridle.com/), gebaut mit der **Godot Engine 4.7** und **GDScript**.
 
 ## 🎮 Spielkonzept
 
@@ -49,12 +49,12 @@ Jeder Tick durchläuft eine feste Reihenfolge:
 
 ### Wasser-System
 - Water Pumps produzieren und speichern Wasser
-- Water Pipes leiten Wasser weiter (prozentual von `max_water` pro Tick)
+- Water Pipes leiten Wasser weiter (prozentual von `max_water` pro Tick, Basis 50%)
 - Wasser-immune Gebäude können kein Wasser aufnehmen
 
 ### Forschungs-System
 - Research Center produzieren `research_points` pro Tick passiv
-- Research Points werden global gesammelt (Grundlage für spätere Upgrades)
+- Research Points werden global gesammelt (Grundlage für spätere Gebäude-Freischaltung)
 
 ### Booster-System
 Drei Booster-Typen beeinflussen direkte Nachbarn pro Tick:
@@ -62,7 +62,22 @@ Drei Booster-Typen beeinflussen direkte Nachbarn pro Tick:
 - **Circulator** – boosted Nachbar-Generatoren: erhöht effektives `max_water`
 - **Bank** – boosted Nachbar-Offices: `sell_amount * (1 + summe_sell_boost)`
 
-Booster stacken additiv (4 Banken = +10x sell_amount).
+Booster stacken additiv (4 Isolatoren = +20% heat_boost).
+
+### Upgrade-System
+Zwei Upgrade-Modi:
+- **Multiplikativ** – für Produktion, Max-Werte, Sell-Amount etc.: `wert * (1.0 + multiplier * stufen)`
+- **Additiv** – für Transfer-Rates und Booster-Effektivität: `wert + (multiplier * stufen)`
+
+Drei Target-Typen:
+- **GLOBAL** – gilt für globale Spielwerte (z.B. Max Storage)
+- **BUILDING_TYPE** – gilt für alle Gebäude eines bestimmten Typs
+- **TAG** – gilt für alle Gebäude mit einem bestimmten Tag (z.B. alle `energy_seller`)
+
+Besonderheiten:
+- Kosten steigen exponentiell: `base_cost * (cost_multiplier ^ current_level)`
+- Reaktor Heat-Production Upgrades können per SELL-Button rückgängig gemacht werden (50% Rückerstattung pro Stufe)
+- Lifespan-Upgrades verlängern die Lebensdauer von Verbrauchsmaterial
 
 ### Tag-System
 Gebäudeeigenschaften über Tags statt Typ-Abfragen:
@@ -84,15 +99,16 @@ Gebäudeeigenschaften über Tags statt Typ-Abfragen:
 | `booster` | beeinflusst Nachbargebäude positiv |
 
 ### BigNumber-System
-Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte. Unterstützt alle Grundrechenarten sowie kompakte Anzeige mit internationalen Suffixen (K, M, B, T, Qa, Qi, Sx, …) mit intelligenten Nachkommastellen (5B statt 5.00B, 5.5B wenn nötig).
+Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte. Unterstützt alle Grundrechenarten sowie kompakte Anzeige mit internationalen Suffixen (K, M, B, T, Qa, Qi, Sx, …) mit intelligenten Nachkommastellen. Unterstützt korrekt Werte unter 1.0 (z.B. 0.15 Energy/Tick der Wind Turbine).
 
 ### Gebäude-Lebensdauer
-- **Verbrauchsmaterial** (Reaktoren, Windturbinen): verfallen nach X Ticks
+- **Verbrauchsmaterial** (Reaktoren, Windturbinen): verfallen nach X Ticks, Balken läuft von voll nach leer
 - **Infrastruktur** (alles andere): permanent (`lifespan = -1`)
+- Lebensdauer durch Upgrades verlängerbar
 
 ### Visuelles Feedback
 - Füllstand-Balken auf Grid-Zellen (Wasser blau, Hitze rot)
-- Lebensdauer-Balken (gelb) für Verbrauchsmaterial
+- Lebensdauer-Balken (gelb) läuft von voll nach leer für Verbrauchsmaterial
 - Dynamisch berechnete Zellgröße – Grid skaliert mit Fenstergröße
 
 ## 🏗️ Vollständige Gebäudeliste
@@ -124,7 +140,7 @@ Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte
 ### Hitze-Management
 | Gebäude | Funktion |
 |---|---|
-| Heat Pipe | puffert & verteilt Wärme |
+| Heat Pipe | puffert & verteilt Wärme (Basis 30% Transfer/Tick) |
 | Heat Sink | vernichtet 5% Wärme/Tick |
 | Heat Inlet | Platzhalter (zukünftig: Untergrund-Transfer) |
 | Heat Outlet | Platzhalter (zukünftig: Untergrund-Transfer) |
@@ -134,7 +150,7 @@ Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte
 |---|---|---|
 | Water Pump | 25K/Tick | 150K |
 | Ground Water Pump | 67.5K/Tick | 250K |
-| Water Pipe | – | 150K (Transfer) |
+| Water Pipe | – | 150K (Transfer Basis 50%/Tick) |
 
 ### Auto-Seller & Booster
 | Gebäude | Funktion | Sell/Tick |
@@ -144,7 +160,7 @@ Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte
 | Medium Office | verkauft Energie | 2.5K |
 | Large Office | verkauft Energie | 60K |
 | Huge Office | verkauft Energie | 900K |
-| Boiler House | verkauft Wärme direkt | – |
+| Boiler House | verkauft Wärme direkt | 2.5K |
 | Isolation | +5% Heat-Boost für Nachbar-Reaktoren | – |
 | Circulator | +90% max_water für Nachbar-Generatoren | – |
 | Bank | +2.5x sell_amount für Nachbar-Offices | – |
@@ -168,9 +184,16 @@ HeaderRow
 MainArea
 ├── ComponentsPanel
 │   ├── CategoryTabs (Reaktoren | Generatoren | Hitze | Wasser | Verkauf | Forschung)
-│   ├── BuildingList (dynamisch befüllt)
+│   ├── BuildingList (dynamisch befüllt, gecacht)
 │   └── TooltipBox
 └── GridPanel – 22×15 Reaktor-Grid
+
+UpgradePanel (eigene Szene, Overlay über MainArea)
+├── BackButton – zurück zu Power Plants
+├── CreditsLabel – aktueller Kontostand
+└── ScrollContainer
+    └── GridContainer (2 Spalten)
+        └── [Upgrade-Einträge: Label + SELL? + BUY]
 ```
 
 ## 📁 Projektstruktur
@@ -178,17 +201,26 @@ MainArea
 ```
 scripts/
 ├── control.gd            # Hauptsteuerung: Grid, Tick-Loop, UI, alle process_*
-├── Bulding.gd            # Instanz eines platzierten Gebäudes
+├── Building.gd           # Instanz eines platzierten Gebäudes
 ├── BuildingDefinition.gd # Template + Enum + alle Felder
 ├── Building_database.gd  # Fabrik-Funktionen für alle Gebäudetypen
-└── BigNumber.gd          # Mantisse/Exponent-Zahlensystem
+├── BigNumber.gd          # Mantisse/Exponent-Zahlensystem
+├── UpgradeDefinition.gd  # Template + Enums für Upgrades
+└── UpgradeDatabase.gd    # Alle Upgrade-Definitionen
+
+scenes/
+├── control.tscn          # Hauptszene
+└── upgrade_panel.tscn    # Upgrade-Overlay (eigene Szene)
 ```
 
 ### Architektur-Prinzipien
 - `BuildingDefinition` – unveränderliches Template (was ein Gebäude *ist*)
 - `Building` – veränderliche Instanz (aktueller Zustand: Hitze, Wasser, Alter)
 - `BuildingDatabase` – statische Fabrik-Funktionen, große Zahlen via `from_notation(m, e)`
+- `UpgradeDefinition` – Template für Upgrades (Ziel, Stat, Multiplikator, Modus)
+- `UpgradeDatabase` – alle Upgrade-Definitionen als statische Fabrik-Funktionen
 - Gebäudetypen via `enum type`, Verhalten via `tags` – keine Magic Strings
+- Upgrades via `enum stat_type` und `enum target_type` – klar getrennte Ziele
 
 ## 🚧 Roadmap
 
@@ -206,10 +238,12 @@ scripts/
 - [x] Tag-System
 - [x] BigNumber-System (K/M/B/T/Qa/Qi/Sx…)
 - [x] UI-Grundgerüst (Header, Components-Panel, Grid)
-- [x] Visuelles Feedback (Füllstand- & Lebensdauer-Balken)
+- [x] Visuelles Feedback (Füllstand- & Lebensdauer-Balken, Balken läuft runter)
 - [x] Vollständige Gebäudeliste
-- [ ] Upgrades (Logik + UI)
-- [ ] Forschung (Logik + UI – Research Points investieren)
+- [x] Upgrade-System (Multiplikativ + Additiv, Global + Type + Tag)
+- [x] Upgrade-Panel (eigene Szene, Overlay, zweispaltig)
+- [x] Sell-Button für Reaktor Heat-Production Upgrades
+- [ ] Forschung (Logik + UI – Gebäude freischalten)
 - [ ] Savegames
 - [ ] Vollständige Visualisierung (Sprites statt Text)
 - [ ] Sound/Musik
@@ -217,6 +251,8 @@ scripts/
 - [ ] Offline Progress
 
 ### Nice-to-Have (Post-1.0)
+- [ ] Upgrade-Kategorien / Gruppierung
+- [ ] Upgrades durch Forschung freischalten
 - [ ] Bonusticks
 - [ ] Prestige-/Reset-System
 - [ ] Weitere Spielmodi
@@ -227,4 +263,4 @@ scripts/
 
 ## 🎯 Inspiration
 
-Basiert auf dem Spielkonzept von [Reactor Idle by Grest Games](https://grestgames.itch.io/reactor-idle), mit eigenständigen Mechaniken – insbesondere das Wasser-System als additiver Kapazitäts-Booster, das Booster-System mit Nachbarschafts-Stacking, sowie das BigNumber-System für astronomische Zahlenwerte.
+Basiert auf dem Spielkonzept von [Reactor Idle by Grest Games](https://reactoridle.com/), mit eigenständigen Mechaniken – insbesondere das Wasser-System als additiver Kapazitäts-Booster, das Booster-System mit Nachbarschafts-Stacking, das BigNumber-System für astronomische Zahlenwerte, sowie ein zweistufiges Upgrade-System mit multiplikativen und additiven Modi.
