@@ -129,6 +129,14 @@ func divide_float(divisor: float) -> BigNumber:
 
 
 func compare(other: BigNumber) -> int:
+	# Nullcheck zuerst
+	if mantissa == 0.0 and other.mantissa == 0.0:
+		return 0
+	if mantissa == 0.0:
+		return -1
+	if other.mantissa == 0.0:
+		return 1
+	# Dann Exponent vergleichen
 	if exponent != other.exponent:
 		return -1 if exponent < other.exponent else 1
 	if mantissa == other.mantissa:
@@ -199,3 +207,4 @@ func to_display_string() -> String:
 		return "%.1f%s" % [display_value, suffix]
 	else:
 		return "%.2f%s" % [display_value, suffix]
+		

@@ -4,6 +4,7 @@ class_name UpgradeDefinition
 enum target_type {
 	GLOBAL,
 	BUILDING_TYPE,
+	TAG,
 }
 
 enum stat_type {
@@ -12,17 +13,27 @@ enum stat_type {
 	MAX_WATER,
 	WATER_PRODUCTION,
 	ENERGY_PROCESSING,
+	ENERGY_PRODUCTION,
 	SELL_AMOUNT,
 	HEAT_BOOST,
 	WATER_BOOST,
 	SELL_AMOUNT_BOOST,
 	ADDITIONAL_STORAGE,
 	HEAT_TRANSFER_RATE,
+	WATER_TRANSFER_RATE,
+	LIFESPAN,
+	RESEARCH_PRODUCTION,
+}
+
+enum upgrade_mode {
+	MULTIPLICATIVE,
+	ADDITIVE,
 }
 
 var id : String = ""
 var display_name : String = ""
 var description : String = ""
+var target_tag : String = ""
 
 var base_cost : BigNumber = BigNumber.from_float(0.0)
 var cost_multiplier : float = 2.1
@@ -31,6 +42,7 @@ var target : target_type = target_type.GLOBAL
 var building_type : BuildingDefinition.type = BuildingDefinition.type.NONE
 var stat : stat_type = stat_type.HEAT_PRODUCTION
 var multiplier : float = 1.0
+var mode : upgrade_mode = upgrade_mode.MULTIPLICATIVE
 
 var requires : String = ""
 

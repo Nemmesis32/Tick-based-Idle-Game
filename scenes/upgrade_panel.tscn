@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://ccf6sv60sjcft"]
+
+[ext_resource type="Script" uid="uid://dhww3uy15xkmt" path="res://scripts/upgrade_panel.gd" id="1_lev6e"]
+
+[node name="UpgradePanel" type="Control" unique_id=943092538]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lev6e")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="." unique_id=1187929995]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 75.0
+offset_right = 10.0
+offset_bottom = 75.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.99, 0.99)
+
+[node name="GridContainer" type="GridContainer" parent="ScrollContainer" unique_id=680188296]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 2
+
+[node name="PowerPlant" type="Button" parent="." unique_id=239700262]
+layout_mode = 0
+offset_left = 10.0
+offset_right = 169.0
+offset_bottom = 31.0
+text = "Back to Powerplant"
+
+[node name="CreditsLabel" type="Label" parent="." unique_id=1916663194]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 31.0
+offset_right = 65.0
+offset_bottom = 54.0
+text = "Credits"
