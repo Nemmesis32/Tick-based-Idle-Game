@@ -45,6 +45,7 @@ var multiplier : float = 1.0
 var mode : upgrade_mode = upgrade_mode.MULTIPLICATIVE
 
 var requires : String = ""
+var required_research: String = ""
 
 var current_level : int = 0
 var max_level : int = -1

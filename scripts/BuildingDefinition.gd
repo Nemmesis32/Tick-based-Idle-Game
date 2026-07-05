@@ -65,6 +65,8 @@ var energy_loss : float = 0.0
 
 # Research
 var research_production : BigNumber = BigNumber.from_float(0.0)
+var required_research : String = ""
+var manager_research_id: String = ""
 
 # Selling
 var sell_amount : BigNumber = BigNumber.from_float(0.0)

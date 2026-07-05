@@ -1,0 +1,71 @@
+[gd_scene format=3 uid="uid://ddq5qvgrfohpm"]
+
+[ext_resource type="Script" uid="uid://ddeawsqjt6o4b" path="res://scripts/research_panel.gd" id="1_k1y5r"]
+
+[node name="ResearchPanel" type="Control" unique_id=1524860085]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_k1y5r")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1590932840]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1133840574]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1674844818]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1674190487]
+layout_mode = 2
+text = "Back to Reaktor"
+
+[node name="RPLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1460182829]
+layout_mode = 2
+text = "RP: 0 "
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=859440960]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=648843040]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Wirtschaft" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1002147010]
+layout_mode = 2
+text = "Wirtschaft"
+
+[node name="Grid_Wirtschaft" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1437308641]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 2
+
+[node name="Produktion & infrastruktur" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1622717415]
+layout_mode = 2
+text = "Produktion & infrastruktur"
+
+[node name="GridW&I" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=831865080]
+layout_mode = 2
+size_flags_vertical = 3
+columns = 2
+
+[node name="Technologie und Manager" type="Label" parent="MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1982615552]
+layout_mode = 2
+text = "Technologie und Manager"
+
+[node name="GridT&M" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1751463397]
+layout_mode = 2
+size_flags_vertical = 3
+columns = 2

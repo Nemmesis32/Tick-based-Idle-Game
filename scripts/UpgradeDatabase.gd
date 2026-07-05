@@ -64,6 +64,7 @@ static func create_office_sell_power() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.SELL_AMOUNT
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "home_office"
 	return def
 
 static func create_research_center_production() -> UpgradeDefinition:
@@ -78,6 +79,7 @@ static func create_research_center_production() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.RESEARCH_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "research_center_bought"
 	return def
 
 static func create_boiler_house_sell() -> UpgradeDefinition:
@@ -92,6 +94,7 @@ static func create_boiler_house_sell() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.SELL_AMOUNT
 	def.multiplier = 0.4
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "boiler_house"
 	return def
 
 # ─── GENERATOREN ───────────────────────────────────────────
@@ -108,6 +111,7 @@ static func create_generator_max_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.MAX_HEAT
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "generator_1"
 	return def
 
 static func create_generator_effectiveness() -> UpgradeDefinition:
@@ -122,6 +126,7 @@ static func create_generator_effectiveness() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.ENERGY_PROCESSING
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "generator_1"
 	return def
 
 static func create_generator_max_water() -> UpgradeDefinition:
@@ -136,6 +141,7 @@ static func create_generator_max_water() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.MAX_WATER
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "generator_2"
 	return def
 
 # ─── HITZE ─────────────────────────────────────────────────
@@ -152,6 +158,7 @@ static func create_heat_exchanger_max_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.MAX_HEAT
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "heat_exchanger"
 	return def
 
 static func create_heat_sink_max_heat() -> UpgradeDefinition:
@@ -166,6 +173,7 @@ static func create_heat_sink_max_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.MAX_HEAT
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "heat_sink"
 	return def
 
 static func create_heat_pipe_transfer() -> UpgradeDefinition:
@@ -180,6 +188,7 @@ static func create_heat_pipe_transfer() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_TRANSFER_RATE
 	def.multiplier = 0.1
 	def.mode = UpgradeDefinition.upgrade_mode.ADDITIVE
+	def.required_research = "heat_exchanger"
 	return def
 
 static func create_heat_inlet_outlet_max_heat() -> UpgradeDefinition:
@@ -194,6 +203,7 @@ static func create_heat_inlet_outlet_max_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.MAX_HEAT
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "heat_inlet"
 	return def
 
 # ─── WASSER ────────────────────────────────────────────────
@@ -210,6 +220,7 @@ static func create_water_pump_production() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.WATER_PRODUCTION
 	def.multiplier = 0.5
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "water_pump"
 	return def
 
 static func create_ground_water_pump_production() -> UpgradeDefinition:
@@ -224,6 +235,7 @@ static func create_ground_water_pump_production() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.WATER_PRODUCTION
 	def.multiplier = 0.5
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "groundwater_pump"
 	return def
 
 static func create_water_pipe_transfer() -> UpgradeDefinition:
@@ -238,6 +250,7 @@ static func create_water_pipe_transfer() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.WATER_TRANSFER_RATE
 	def.multiplier = 0.1
 	def.mode = UpgradeDefinition.upgrade_mode.ADDITIVE
+	def.required_research = "water_pipe"
 	return def
 
 static func create_water_elem_max_water() -> UpgradeDefinition:
@@ -252,6 +265,7 @@ static func create_water_elem_max_water() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.MAX_WATER
 	def.multiplier = 0.5
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "water_pump"
 	return def
 
 # ─── BOOSTER ───────────────────────────────────────────────
@@ -268,6 +282,7 @@ static func create_power_battery_size() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.ADDITIONAL_STORAGE
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "batteries"
 	return def
 
 static func create_isolation_effectiveness() -> UpgradeDefinition:
@@ -282,6 +297,7 @@ static func create_isolation_effectiveness() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_BOOST
 	def.multiplier = 0.05
 	def.mode = UpgradeDefinition.upgrade_mode.ADDITIVE
+	def.required_research = "isolation"
 	return def
 
 static func create_circulator_water_buff() -> UpgradeDefinition:
@@ -296,6 +312,7 @@ static func create_circulator_water_buff() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.WATER_BOOST
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.ADDITIVE
+	def.required_research = "circulator"
 	return def
 
 # ─── REAKTOREN ─────────────────────────────────────────────
@@ -312,6 +329,7 @@ static func create_solar_cell_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.5
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "solar_cell"
 	return def
 
 static func create_solar_cell_lifetime() -> UpgradeDefinition:
@@ -326,6 +344,7 @@ static func create_solar_cell_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "solar_cell"
 	return def
 
 static func create_wind_turbine_heat() -> UpgradeDefinition:
@@ -337,9 +356,10 @@ static func create_wind_turbine_heat() -> UpgradeDefinition:
 	def.cost_multiplier = 2.8
 	def.target = UpgradeDefinition.target_type.BUILDING_TYPE
 	def.building_type = BuildingDefinition.type.WIND_TURBINE
-	def.stat = UpgradeDefinition.stat_type.ENERGY_PRODUCTION  # ← geändert
+	def.stat = UpgradeDefinition.stat_type.ENERGY_PRODUCTION
 	def.multiplier = 0.5
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = ""
 	return def
 
 static func create_wind_turbine_lifetime() -> UpgradeDefinition:
@@ -354,6 +374,7 @@ static func create_wind_turbine_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = ""
 	return def
 
 static func create_coal_burner_heat() -> UpgradeDefinition:
@@ -368,6 +389,7 @@ static func create_coal_burner_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "coal_burner"
 	return def
 
 static func create_coal_burner_lifetime() -> UpgradeDefinition:
@@ -382,6 +404,7 @@ static func create_coal_burner_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "coal_burner"
 	return def
 
 static func create_gas_burner_heat() -> UpgradeDefinition:
@@ -396,6 +419,7 @@ static func create_gas_burner_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "gas_burner"
 	return def
 
 static func create_gas_burner_lifetime() -> UpgradeDefinition:
@@ -410,6 +434,7 @@ static func create_gas_burner_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "gas_burner"
 	return def
 
 static func create_nuclear_cell_heat() -> UpgradeDefinition:
@@ -424,6 +449,7 @@ static func create_nuclear_cell_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "nuclear_cell"
 	return def
 
 static func create_nuclear_cell_lifetime() -> UpgradeDefinition:
@@ -438,6 +464,7 @@ static func create_nuclear_cell_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "nuclear_cell"
 	return def
 
 static func create_thermonuclear_cell_heat() -> UpgradeDefinition:
@@ -452,6 +479,7 @@ static func create_thermonuclear_cell_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "thermonuclear_cell"
 	return def
 
 static func create_thermonuclear_cell_lifetime() -> UpgradeDefinition:
@@ -466,6 +494,7 @@ static func create_thermonuclear_cell_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "thermonuclear_cell"
 	return def
 
 static func create_fusion_cell_heat() -> UpgradeDefinition:
@@ -480,6 +509,7 @@ static func create_fusion_cell_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "fusion_cell"
 	return def
 
 static func create_fusion_cell_lifetime() -> UpgradeDefinition:
@@ -494,6 +524,7 @@ static func create_fusion_cell_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "fusion_cell"
 	return def
 
 static func create_thorium_cell_heat() -> UpgradeDefinition:
@@ -508,6 +539,7 @@ static func create_thorium_cell_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "thorium_cell"
 	return def
 
 static func create_thorium_cell_lifetime() -> UpgradeDefinition:
@@ -522,6 +554,7 @@ static func create_thorium_cell_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "thorium_cell"
 	return def
 
 static func create_protactium_cell_heat() -> UpgradeDefinition:
@@ -536,6 +569,7 @@ static func create_protactium_cell_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "protactium_cell"
 	return def
 
 static func create_protactium_cell_lifetime() -> UpgradeDefinition:
@@ -550,6 +584,7 @@ static func create_protactium_cell_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "protactium_cell"
 	return def
 
 static func create_curium_cell_heat() -> UpgradeDefinition:
@@ -564,6 +599,7 @@ static func create_curium_cell_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "curium_cell"
 	return def
 
 static func create_curium_cell_lifetime() -> UpgradeDefinition:
@@ -578,6 +614,7 @@ static func create_curium_cell_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "curium_cell"
 	return def
 
 static func create_balduranium_cell_heat() -> UpgradeDefinition:
@@ -592,6 +629,7 @@ static func create_balduranium_cell_heat() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.HEAT_PRODUCTION
 	def.multiplier = 0.25
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "balduranium_cell"
 	return def
 
 static func create_balduranium_cell_lifetime() -> UpgradeDefinition:
@@ -606,4 +644,5 @@ static func create_balduranium_cell_lifetime() -> UpgradeDefinition:
 	def.stat = UpgradeDefinition.stat_type.LIFESPAN
 	def.multiplier = 1.0
 	def.mode = UpgradeDefinition.upgrade_mode.MULTIPLICATIVE
+	def.required_research = "balduranium_cell"
 	return def

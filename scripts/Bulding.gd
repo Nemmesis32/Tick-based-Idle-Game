@@ -6,8 +6,9 @@ var definition : BuildingDefinition
 var current_heat : BigNumber = BigNumber.from_float(0.0)
 var current_water : BigNumber = BigNumber.from_float(0.0)
 
-var age := 0
 
+var age := 0
+var is_ghost: bool = false
 
 func _init(p_definition : BuildingDefinition):
 	definition = p_definition
