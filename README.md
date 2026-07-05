@@ -4,7 +4,7 @@ Ein tick-basiertes Idle-Strategie-Spiel inspiriert von [Reactor Idle](https://re
 
 ## 🎮 Spielkonzept
 
-Baue und verwalte einen Reaktorkomplex auf einem 22×15 Grid. Platziere Reaktoren, leite Wärme über Heat Pipes zu Generatoren, versorge sie mit Wasser für zusätzlichen Durchsatz, verkaufe Energie über Offices – und vermeide Überhitzung.
+Baue und verwalte einen Reaktorkomplex auf einem 22×15 Grid. Platziere Reaktoren, leite Wärme über Heat Pipes zu Generatoren, versorge sie mit Wasser für zusätzlichen Durchsatz, verkaufe Energie über Offices – und vermeide Überhitzung. Erforsche neue Gebäude über den Forschungsbaum und schalte mächtigere Reaktoren und Infrastruktur frei.
 
 ```
 Reaktor → Heat Pipe → Generator → Strom → Office → Credits
@@ -54,7 +54,65 @@ Jeder Tick durchläuft eine feste Reihenfolge:
 
 ### Forschungs-System
 - Research Center produzieren `research_points` pro Tick passiv
-- Research Points werden global gesammelt (Grundlage für spätere Gebäude-Freischaltung)
+- Drei Stufen: Research Center (1 RP/Tick), Advanced (8 RP/Tick), Super (40 RP/Tick)
+- Research Points fließen in einen globalen Pool
+- Der Forschungsbaum schaltet neue Gebäude frei – das ist die **einzige** Funktion der Forschung
+- Zwei Ausnahmen: Manager (Auto-Rebuild) und Chromatic Boost (Ticks/Sekunde) sind keine Gebäude
+
+#### Forschungsbaum-Struktur
+```
+Research Center (100 Credits – Einstieg)
+├── Home Office
+├── Wind Turbine Manager
+├── Chromatic Boost 1/5 → 2/5 → 3/5 → 4/5 → 5/5
+└── Solar Cell
+    ├── Generator 1 (kostenlos)
+    ├── Isolation
+    ├── Solar Cell Manager
+    └── Coal Burner
+        ├── Heat Exchanger
+        ├── Small Office
+        ├── Coal Burner Manager
+        └── Gas Burner
+            ├── Heat Sink → Boiler House
+            ├── Advanced Research Center
+            ├── Gas Burner Manager
+            └── Nuclear Cell
+                ├── Water Pump
+                ├── Water Pipe
+                ├── Generator 2
+                ├── Medium Office
+                ├── Nuclear Cell Manager
+                └── Thermonuclear Cell
+                    ├── Thermonuclear Cell Manager
+                    └── Fusion Cell
+                        ├── Generator 3
+                        ├── Groundwater Pump
+                        ├── Large Office
+                        ├── Bank
+                        ├── Fusion Cell Manager
+                        └── Thorium Cell
+                            ├── Generator 4
+                            ├── Heat Inlet
+                            ├── Heat Outlet
+                            ├── Huge Office
+                            ├── Thorium Cell Manager
+                            └── Protactium Cell
+                                ├── Generator 5
+                                ├── Circulator
+                                ├── Super Research Center
+                                ├── Protactium Cell Manager
+                                └── Curium Cell
+                                    ├── Curium Cell Manager
+                                    └── Balduranium Cell
+                                        └── Balduranium Cell Manager
+```
+
+#### Forschungs-Logik
+- Forschungspunkte sind **Verbrauchsmaterial** – einmal ausgegeben weg
+- Nodes erscheinen im Grid sobald ihre Voraussetzung erforscht wurde (Zustand: gesperrt → sichtbar → kaufbar)
+- `research_center_bought` ist die Sonder-Node: kostet 100 Credits statt RP, schaltet den ganzen Baum auf
+- Wind Turbine (Gebäude) ist ohne Forschung verfügbar – das einzige Startgebäude
 
 ### Booster-System
 Drei Booster-Typen beeinflussen direkte Nachbarn pro Tick:
@@ -106,6 +164,13 @@ Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte
 - **Infrastruktur** (alles andere): permanent (`lifespan = -1`)
 - Lebensdauer durch Upgrades verlängerbar
 
+### Savegame-System
+- Automatisches Speichern alle **60 Sekunden** + beim Schließen des Spiels
+- Speicherort: `user://savegame.json` (Windows: `AppData/Roaming/Godot/app_userdata/PROJEKTNAME/`)
+- Gespeicherte Daten: Credits, Research Points, Forschungsstand, Grid-Zustand (Gebäudetyp, Alter, Wärme, Wasser)
+- Versioniert (`version: 1`) – vorbereitet für spätere Save-Kompatibilitätsprüfung
+- Erweiterbar auf mehrere Slots (5 Savegame-Slots geplant)
+
 ### Visuelles Feedback
 - Füllstand-Balken auf Grid-Zellen (Wasser blau, Hitze rot)
 - Lebensdauer-Balken (gelb) läuft von voll nach leer für Verbrauchsmaterial
@@ -114,64 +179,64 @@ Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte
 ## 🏗️ Vollständige Gebäudeliste
 
 ### Reaktoren
-| Gebäude | Kosten | Heat/Tick | Lifespan |
-|---|---|---|---|
-| Solar Cell | 100 | 3 | 100 |
-| Coal Burner | 1K | 380 | 400 |
-| Gas Burner | 40M | 75K | 800 |
-| Nuclear Cell | 500M | 1.2M | 800 |
-| Thermonuclear Cell | 20B | 50M | 800 |
-| Fusion Cell | 800B | 2.5B | 800 |
-| Thorium Cell | Platzhalter | – | – |
-| Protactium Cell | Platzhalter | – | – |
-| Curium Cell | Platzhalter | – | – |
-| Balduranium Cell | Platzhalter | – | – |
+| Gebäude | Kosten | Heat/Tick | Lifespan | Freischaltung |
+|---|---|---|---|---|
+| Solar Cell | 100 | 3 | 100 | solar_cell |
+| Coal Burner | 1K | 380 | 400 | coal_burner |
+| Gas Burner | 40M | 75K | 800 | gas_burner |
+| Nuclear Cell | 500M | 1.2M | 800 | nuclear_cell |
+| Thermonuclear Cell | 20B | 50M | 800 | thermonuclear_cell |
+| Fusion Cell | 800B | 2.5B | 800 | fusion_cell |
+| Thorium Cell | Platzhalter | – | – | thorium_cell |
+| Protactium Cell | Platzhalter | – | – | protactium_cell |
+| Curium Cell | Platzhalter | – | – | curium_cell |
+| Balduranium Cell | Platzhalter | – | – | balduranium_cell |
 
 ### Generatoren
-| Gebäude | Kosten | Processing | Wasser-Boost |
-|---|---|---|---|
-| Wind Turbine | 1 | direkt 0.15/Tick | – |
-| Basic Generator | 500 | 3 | – |
-| Generator 2 | 2.5M | 9 | +100/Wasser |
-| Generator 3 | 10T | 32 | +200/Wasser |
-| Generator 4 | 50Qa | 96 | +400/Wasser |
-| Generator 5 | 12.5Qa | 288 | +800/Wasser |
+| Gebäude | Kosten | Processing | Wasser-Boost | Freischaltung |
+|---|---|---|---|---|
+| Wind Turbine | 1 | direkt 0.15/Tick | – | – (Startgebäude) |
+| Basic Generator | 500 | 3 | – | generator_1 |
+| Generator 2 | 2.5M | 9 | +100/Wasser | generator_2 |
+| Generator 3 | 10T | 32 | +200/Wasser | generator_3 |
+| Generator 4 | 50Qa | 96 | +400/Wasser | generator_4 |
+| Generator 5 | 12.5Qa | 288 | +800/Wasser | generator_5 |
 
 ### Hitze-Management
-| Gebäude | Funktion |
-|---|---|
-| Heat Pipe | puffert & verteilt Wärme (Basis 30% Transfer/Tick) |
-| Heat Sink | vernichtet 5% Wärme/Tick |
-| Heat Inlet | Platzhalter (zukünftig: Untergrund-Transfer) |
-| Heat Outlet | Platzhalter (zukünftig: Untergrund-Transfer) |
+| Gebäude | Funktion | Freischaltung |
+|---|---|---|
+| Heat Pipe | puffert & verteilt Wärme (30% Transfer/Tick) | heat_exchanger |
+| Heat Sink | vernichtet 5% Wärme/Tick | heat_sink |
+| Heat Inlet | Untergrund-Transfer (geplant) | heat_inlet |
+| Heat Outlet | Untergrund-Transfer (geplant) | heat_outlet |
+| Boiler House | verkauft Wärme direkt | boiler_house |
 
 ### Wasser-Management
-| Gebäude | Produktion | Max Storage |
-|---|---|---|
-| Water Pump | 25K/Tick | 150K |
-| Ground Water Pump | 67.5K/Tick | 250K |
-| Water Pipe | – | 150K (Transfer Basis 50%/Tick) |
+| Gebäude | Produktion | Max Storage | Freischaltung |
+|---|---|---|---|
+| Water Pump | 25K/Tick | 150K | water_pump |
+| Ground Water Pump | 67.5K/Tick | 250K | groundwater_pump |
+| Water Pipe | – | 150K (50%/Tick) | water_pipe |
 
 ### Auto-Seller & Booster
-| Gebäude | Funktion | Sell/Tick |
-|---|---|---|
-| Home Office | verkauft Energie | 5 |
-| Small Office | verkauft Energie | 100 |
-| Medium Office | verkauft Energie | 2.5K |
-| Large Office | verkauft Energie | 60K |
-| Huge Office | verkauft Energie | 900K |
-| Boiler House | verkauft Wärme direkt | 2.5K |
-| Isolation | +5% Heat-Boost für Nachbar-Reaktoren | – |
-| Circulator | +90% max_water für Nachbar-Generatoren | – |
-| Bank | +2.5x sell_amount für Nachbar-Offices | – |
-| Battery | +100 max_storage pro Einheit | – |
+| Gebäude | Funktion | Sell/Tick | Freischaltung |
+|---|---|---|---|
+| Home Office | verkauft Energie | 5 | home_office |
+| Small Office | verkauft Energie | 100 | small_office |
+| Medium Office | verkauft Energie | 2.5K | medium_office |
+| Large Office | verkauft Energie | 60K | large_office |
+| Huge Office | verkauft Energie | 900K | huge_office |
+| Isolation | +5% Heat-Boost Nachbar-Reaktoren | – | isolation |
+| Circulator | +90% max_water Nachbar-Generatoren | – | circulator |
+| Bank | +2.5x sell_amount Nachbar-Offices | – | bank |
+| Battery | +100 max_storage pro Einheit | – | batteries |
 
 ### Forschung
-| Gebäude | Research/Tick |
-|---|---|
-| Research Center | 1 |
-| Advanced Research Center | 8 |
-| Super Research Center | 40 |
+| Gebäude | Research/Tick | Freischaltung |
+|---|---|---|
+| Research Center | 1 | research_center_bought |
+| Advanced Research Center | 8 | advanced_research_center |
+| Super Research Center | 40 | super_research_center |
 
 ## 🖥️ UI-Struktur
 
@@ -184,7 +249,7 @@ HeaderRow
 MainArea
 ├── ComponentsPanel
 │   ├── CategoryTabs (Reaktoren | Generatoren | Hitze | Wasser | Verkauf | Forschung)
-│   ├── BuildingList (dynamisch befüllt, gecacht)
+│   ├── BuildingList (dynamisch befüllt, gecacht, gefiltert nach Forschungsstand)
 │   └── TooltipBox
 └── GridPanel – 22×15 Reaktor-Grid
 
@@ -194,23 +259,34 @@ UpgradePanel (eigene Szene, Overlay über MainArea)
 └── ScrollContainer
     └── GridContainer (2 Spalten)
         └── [Upgrade-Einträge: Label + SELL? + BUY]
+
+ResearchPanel (eigene Szene, Overlay über MainArea)
+├── BackButton – zurück zu Power Plants
+├── RPLabel – aktuelle Forschungspunkte
+└── ScrollContainer
+    └── GridContainer (2 Spalten)
+        └── [Research-Einträge: Name + Kosten + Erforschen/Gesperrt/Erforscht]
 ```
 
 ## 📁 Projektstruktur
 
 ```
 scripts/
-├── control.gd            # Hauptsteuerung: Grid, Tick-Loop, UI, alle process_*
-├── Building.gd           # Instanz eines platzierten Gebäudes
-├── BuildingDefinition.gd # Template + Enum + alle Felder
-├── Building_database.gd  # Fabrik-Funktionen für alle Gebäudetypen
-├── BigNumber.gd          # Mantisse/Exponent-Zahlensystem
-├── UpgradeDefinition.gd  # Template + Enums für Upgrades
-└── UpgradeDatabase.gd    # Alle Upgrade-Definitionen
+├── control.gd              # Hauptsteuerung: Grid, Tick-Loop, UI, alle process_*
+├── Building.gd             # Instanz eines platzierten Gebäudes
+├── BuildingDefinition.gd   # Template + Enum + alle Felder (inkl. required_research)
+├── Building_database.gd    # Fabrik-Funktionen für alle Gebäudetypen
+├── BigNumber.gd            # Mantisse/Exponent-Zahlensystem
+├── UpgradeDefinition.gd    # Template + Enums für Upgrades
+├── UpgradeDatabase.gd      # Alle Upgrade-Definitionen
+├── ResearchDefinition.gd   # Template für Forschungs-Nodes
+├── ResearchDatabase.gd     # Alle 50 Forschungs-Nodes mit Abhängigkeiten
+└── SaveManager.gd          # Autoload: Speichern/Laden via JSON
 
 scenes/
-├── control.tscn          # Hauptszene
-└── upgrade_panel.tscn    # Upgrade-Overlay (eigene Szene)
+├── control.tscn            # Hauptszene
+├── upgrade_panel.tscn      # Upgrade-Overlay (eigene Szene)
+└── research_panel.tscn     # Forschungsbaum-Overlay (eigene Szene)
 ```
 
 ### Architektur-Prinzipien
@@ -219,12 +295,16 @@ scenes/
 - `BuildingDatabase` – statische Fabrik-Funktionen, große Zahlen via `from_notation(m, e)`
 - `UpgradeDefinition` – Template für Upgrades (Ziel, Stat, Multiplikator, Modus)
 - `UpgradeDatabase` – alle Upgrade-Definitionen als statische Fabrik-Funktionen
+- `ResearchDefinition` – Template für Forschungs-Nodes (ID, Kosten, Voraussetzungen)
+- `ResearchDatabase` – alle 50 Forschungs-Nodes als statische Fabrik-Funktionen
+- `SaveManager` – Autoload-Singleton, speichert/lädt JSON, versioniert
 - Gebäudetypen via `enum type`, Verhalten via `tags` – keine Magic Strings
 - Upgrades via `enum stat_type` und `enum target_type` – klar getrennte Ziele
+- Forschung via `required_research: String` auf `BuildingDefinition` – ein Feld, klare Abhängigkeit
 
 ## 🚧 Roadmap
 
-### Must-Have (1.0)
+### Must-Have (Alpha)
 - [x] Tick-System
 - [x] Grid mit Nachbarschaftssystem (dynamisch skalierend, 22×15)
 - [x] Wärmeverteilung & Überhitzung
@@ -233,33 +313,39 @@ scenes/
 - [x] Auto-Seller System (Offices verkaufen Energie → Credits)
 - [x] Booster-System (Isolation, Circulator, Bank)
 - [x] Heat Sink (Wärme vernichten)
-- [x] Forschungspunkte sammeln
 - [x] Battery (max_storage erhöhen)
 - [x] Tag-System
 - [x] BigNumber-System (K/M/B/T/Qa/Qi/Sx…)
 - [x] UI-Grundgerüst (Header, Components-Panel, Grid)
-- [x] Visuelles Feedback (Füllstand- & Lebensdauer-Balken, Balken läuft runter)
+- [x] Visuelles Feedback (Füllstand- & Lebensdauer-Balken)
 - [x] Vollständige Gebäudeliste
 - [x] Upgrade-System (Multiplikativ + Additiv, Global + Type + Tag)
 - [x] Upgrade-Panel (eigene Szene, Overlay, zweispaltig)
 - [x] Sell-Button für Reaktor Heat-Production Upgrades
-- [ ] Forschung (Logik + UI – Gebäude freischalten)
-- [ ] Savegames
+- [x] Forschungsbaum (50 Nodes, Abhängigkeiten, Credits/RP-Logik)
+- [x] Gebäude durch Forschung freischalten (Gebäudeliste gefiltert)
+- [x] Savegames (JSON, Autosave 60s + beim Schließen, versioniert)
+- [ ] Upgrades filtern nach Forschungsstand
+- [ ] Ghost-Gebäude wenn Reaktoren auslaufen
 - [ ] Vollständige Visualisierung (Sprites statt Text)
 - [ ] Sound/Musik
 - [ ] Einstellungen
 - [ ] Offline Progress
 
-### Nice-to-Have (Post-1.0)
+### Nice-to-Have (Beta / Post-1.0)
+- [ ] Mehrere Savegame-Slots (5 geplant)
+- [ ] Mehrere Maps mit unterschiedlichen Grid-Größen
+- [ ] Gesperrte Felder auf dem Grid
+- [ ] Bodenabhängigkeiten für Gebäude
 - [ ] Upgrade-Kategorien / Gruppierung
 - [ ] Upgrades durch Forschung freischalten
 - [ ] Bonusticks
 - [ ] Prestige-/Reset-System
 - [ ] Weitere Spielmodi
-- [ ] Ingame-Käufe
 - [ ] 2-Feld Reaktoren (Thorium, Protactium)
 - [ ] Radial-Reaktoren (Curium, Balduranium)
-- [ ] Heat Inlet/Outlet System
+- [ ] Heat Inlet/Outlet System (Untergrund-Wärmetransfer)
+- [ ] Ingame-Käufe
 
 ## 🎯 Inspiration
 
