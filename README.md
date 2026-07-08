@@ -1,10 +1,12 @@
 # 🔬 Reactor Idle – GDScript Remake
 
+**Alpha `v0.70`** – Multi-Map-Update ("Giga Refactoring")
+
 Ein tick-basiertes Idle-Strategie-Spiel inspiriert von [Reactor Idle](https://reactoridle.com/), gebaut mit der **Godot Engine 4.7** und **GDScript**.
 
 ## 🎮 Spielkonzept
 
-Baue und verwalte einen Reaktorkomplex auf einem 22×15 Grid. Platziere Reaktoren, leite Wärme über Heat Pipes zu Generatoren, versorge sie mit Wasser für zusätzlichen Durchsatz, verkaufe Energie über Offices – und vermeide Überhitzung. Erforsche neue Gebäude über den Forschungsbaum und schalte mächtigere Reaktoren und Infrastruktur frei.
+Baue und verwalte einen Reaktorkomplex auf einem 24×13 Grid – und mittlerweile auf **mehreren gleichzeitig laufenden Inseln**. Platziere Reaktoren, leite Wärme über Heat Pipes zu Generatoren, versorge sie mit Wasser für zusätzlichen Durchsatz, verkaufe Energie über Offices – und vermeide Überhitzung. Erforsche neue Gebäude über den Forschungsbaum und schalte mächtigere Reaktoren und Infrastruktur frei.
 
 ```
 Reaktor → Heat Pipe → Generator → Strom → Office → Credits
@@ -156,6 +158,28 @@ Gebäudeeigenschaften über Tags statt Typ-Abfragen:
 | `research_producer` | produziert Research Points pro Tick |
 | `booster` | beeinflusst Nachbargebäude positiv |
 
+### Multi-Map-System (neu in v0.70)
+Das Spiel unterstützt mehrere Inseln ("Maps"), die **gleichzeitig und unabhängig voneinander** ticken:
+- Ein globaler Tick durchläuft alle freigeschalteten Maps nacheinander (`MapManager.tick_all()`) – auch wenn du gerade eine andere Insel anschaust, läuft die im Hintergrund weiter
+- **Global geteilt**: Credits, Research Points, Forschungsstand, Tick-Takt, Pause/Fast-Forward
+- **Pro Map getrennt**: Grid, Terrain, Gebäude, Upgrades, gespeicherte Energie
+- **Map-Übersicht** (erreichbar über den "Power Plants"-Tab) zeigt alle Maps als Kacheln mit Live-Energie- und Forschungsproduktion pro Tick
+- **Freischaltung**: neue Maps kosten Credits (aktuell 100.000.000 für die zweite Insel), Lock-Status bleibt über Speichern/Laden erhalten
+- Gesperrte Maps ticken nicht mit – sie verbrauchen keine Rechenzeit und produzieren nichts, bis sie freigeschaltet sind
+- Navigation: "Power Plants" führt immer zur Übersicht; "Zurück" aus Research/Upgrades kehrt zur vorherigen Ansicht zurück (Übersicht oder die zuletzt geöffnete Map)
+
+### Terrain-System
+Insel-Layouts werden als lesbare ASCII-Grids definiert (`MapTerrainDatabase.gd`), eine Zeile Text pro Grid-Zeile:
+
+| Zeichen | Tile-Typ | Bedeutung |
+|---|---|---|
+| `W` | Water | nicht bebaubar |
+| `G` | Grass | normal bebaubar |
+| `S` | Shore | bebaubar wie Grass, **einzige** Fläche für Water Pump |
+| `M` | Mountain | nie bebaubar (aktuell Grass-Sprite als Platzhalter, bis ein eigenes Mountain-Sprite existiert) |
+
+Jede Map bekommt beim Anlegen eine `terrain_id`, über die ihr Layout aus der Datenbank geladen wird – neue Insel-Formen anzulegen heißt einfach, ein neues ASCII-Layout zu ergänzen.
+
 ### BigNumber-System
 Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte. Unterstützt alle Grundrechenarten sowie kompakte Anzeige mit internationalen Suffixen (K, M, B, T, Qa, Qi, Sx, …) mit intelligenten Nachkommastellen. Unterstützt korrekt Werte unter 1.0 (z.B. 0.15 Energy/Tick der Wind Turbine).
 
@@ -167,8 +191,8 @@ Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte
 ### Savegame-System
 - Automatisches Speichern alle **60 Sekunden** + beim Schließen des Spiels
 - Speicherort: `user://savegame.json` (Windows: `AppData/Roaming/Godot/app_userdata/PROJEKTNAME/`)
-- Gespeicherte Daten: Credits, Research Points, Forschungsstand, Grid-Zustand (Gebäudetyp, Alter, Wärme, Wasser)
-- Versioniert (`version: 1`) – vorbereitet für spätere Save-Kompatibilitätsprüfung
+- Gespeicherte Daten: Credits, Research Points, Forschungsstand, **pro Map**: Grid-Zustand (Gebäudetyp, Alter, Wärme, Wasser), Upgrades, Lock-Status
+- Versioniert (`version: 2`, seit v0.70 Multi-Map-Format) – ältere Alpha-Saves sind **nicht** kompatibel
 - Erweiterbar auf mehrere Slots (5 Savegame-Slots geplant)
 
 ### Visuelles Feedback
@@ -214,7 +238,7 @@ Eigene Mantisse/Exponent-Klasse (`BigNumber.gd`) für alle spielrelevanten Werte
 ### Wasser-Management
 | Gebäude | Produktion | Max Storage | Freischaltung |
 |---|---|---|---|
-| Water Pump | 25K/Tick | 150K | water_pump |
+| Water Pump | 25K/Tick | 150K | water_pump (nur auf Shore) |
 | Ground Water Pump | 67.5K/Tick | 250K | groundwater_pump |
 | Water Pipe | – | 150K (50%/Tick) | water_pipe |
 
@@ -246,22 +270,27 @@ HeaderRow
 ├── StatsBox     – Credits, Energy/Tick, Stored + Balken, Sell Energy
 ├── OverlayBox   – Tooltips / Warnungen / Events
 └── ControlsBox  – Auto-Rebuild, Bonus Ticks, Pause/Fast
-MainArea
+
+MapOverviewPanel (Vollbild-Overlay, "Power Plants" führt immer hierher)
+└── Kachel pro Map: Name, Energie/Tick, Forschung/Tick, "Öffnen"-Button
+    (gesperrte Maps: 🔒-Hinweis, Kosten, "Freischalten"-Button)
+
+MainArea (sichtbar nach Klick auf eine Map-Kachel)
 ├── ComponentsPanel
 │   ├── CategoryTabs (Reaktoren | Generatoren | Hitze | Wasser | Verkauf | Forschung)
 │   ├── BuildingList (dynamisch befüllt, gecacht, gefiltert nach Forschungsstand)
 │   └── TooltipBox
-└── GridPanel – 22×15 Reaktor-Grid
+└── GridPanel – 24×13 Reaktor-Grid der aktuell aktiven Map
 
 UpgradePanel (eigene Szene, Overlay über MainArea)
-├── BackButton – zurück zu Power Plants
+├── BackButton – zurück zur vorherigen Ansicht (Übersicht oder aktive Map)
 ├── CreditsLabel – aktueller Kontostand
 └── ScrollContainer
     └── GridContainer (2 Spalten)
         └── [Upgrade-Einträge: Label + SELL? + BUY]
 
 ResearchPanel (eigene Szene, Overlay über MainArea)
-├── BackButton – zurück zu Power Plants
+├── BackButton – zurück zur vorherigen Ansicht (Übersicht oder aktive Map)
 ├── RPLabel – aktuelle Forschungspunkte
 └── ScrollContainer
     └── GridContainer (2 Spalten)
@@ -272,16 +301,20 @@ ResearchPanel (eigene Szene, Overlay über MainArea)
 
 ```
 scripts/
-├── control.gd              # Hauptsteuerung: Grid, Tick-Loop, UI, alle process_*
+├── control.gd              # View/Controller: zeigt aktive Map + Map-Übersicht, Input-Handling
+├── GameState.gd            # Autoload: global geteilter Zustand (Credits, Research, Tick-Takt)
+├── MapManager.gd           # Autoload: hält alle MapState-Instanzen, tickt alle unlockten Maps
+├── MapState.gd             # Pro-Map-Zustand + alle process_*-Funktionen (RefCounted, kein Autoload)
+├── MapTerrainDatabase.gd   # ASCII-Insel-Layouts pro terrain_id
 ├── Building.gd             # Instanz eines platzierten Gebäudes
-├── BuildingDefinition.gd   # Template + Enum + alle Felder (inkl. required_research)
+├── BuildingDefinition.gd   # Template + Enum + alle Felder (inkl. required_research, requires_shore)
 ├── Building_database.gd    # Fabrik-Funktionen für alle Gebäudetypen
 ├── BigNumber.gd            # Mantisse/Exponent-Zahlensystem
 ├── UpgradeDefinition.gd    # Template + Enums für Upgrades
 ├── UpgradeDatabase.gd      # Alle Upgrade-Definitionen
 ├── ResearchDefinition.gd   # Template für Forschungs-Nodes
 ├── ResearchDatabase.gd     # Alle 50 Forschungs-Nodes mit Abhängigkeiten
-└── SaveManager.gd          # Autoload: Speichern/Laden via JSON
+└── SaveManager.gd          # Autoload: Speichern/Laden via JSON, Multi-Map-Format
 
 scenes/
 ├── control.tscn            # Hauptszene
@@ -301,12 +334,17 @@ scenes/
 - Gebäudetypen via `enum type`, Verhalten via `tags` – keine Magic Strings
 - Upgrades via `enum stat_type` und `enum target_type` – klar getrennte Ziele
 - Forschung via `required_research: String` auf `BuildingDefinition` – ein Feld, klare Abhängigkeit
+- `GameState` – Autoload, global geteilter Zustand (Credits, Research, Tick-Takt, Bonus-Ticks)
+- `MapManager` – Autoload, hält alle `MapState`-Instanzen, tickt alle unlockten Maps pro Tick durch
+- `MapState` – `RefCounted`-Klasse (kein Autoload), pro-Map-Zustand + gesamte Tick-Verarbeitung; wird über `MapManager.add_map()` instanziiert
+- `MapTerrainDatabase` – statische Fabrik-Funktionen für ASCII-Insel-Layouts, referenziert über `terrain_id`
+- `control.gd` ist seit v0.70 reine View/Controller-Schicht – zeigt die aktive Map bzw. Map-Übersicht an und delegiert Logik an `GameState`/`MapManager`/`MapState`
 
 ## 🚧 Roadmap
 
 ### Must-Have (Alpha)
 - [x] Tick-System
-- [x] Grid mit Nachbarschaftssystem (dynamisch skalierend, 22×15)
+- [x] Grid mit Nachbarschaftssystem (dynamisch skalierend, 24×13, jetzt pro Map)
 - [x] Wärmeverteilung & Überhitzung
 - [x] Generator: Wärme → Strom (mit Wasser-Boost)
 - [x] Wassersystem (Pumps, Pipes, Verbrauch)
@@ -326,20 +364,29 @@ scenes/
 - [x] Gebäude durch Forschung freischalten (Gebäudeliste gefiltert)
 - [x] Savegames (JSON, Autosave 60s + beim Schließen, versioniert)
 - [ ] Upgrades filtern nach Forschungsstand
-- [ ] Ghost-Gebäude wenn Reaktoren auslaufen
-- [ ] Vollständige Visualisierung (Sprites statt Text)
+- [x] Ghost-Gebäude wenn Reaktoren auslaufen
+- [ ] Vollständige Visualisierung (Sprites statt Text bei Gebäuden)
 - [ ] Sound/Musik
 - [ ] Einstellungen
-- [ ] Offline Progress
+- [x] Offline Progress (Bonus-Ticks, 12h-Cap)
+
+### Multi-Map-System (v0.70)
+- [x] Mehrere Maps laufen gleichzeitig & unabhängig (globaler Tick durchläuft alle unlockten Maps)
+- [x] Map-Übersicht mit Live-Stats (Energie/Forschung pro Tick)
+- [x] Map-Unlock-Mechanik gegen Credits, Lock-Status speicherbar
+- [x] Terrain-Typen Shore (Water-Pump-exklusiv) & Mountain (unbebaubar)
+- [ ] Unterschiedliche Grid-Größen pro Map tatsächlich genutzt (technisch bereits unterstützt)
+- [ ] Research-Voraussetzung für Map-Unlock (aktuell nur Credits-Kosten)
+- [ ] Eigenes Mountain-Sprite (aktuell Grass als Platzhalter)
 
 ### Nice-to-Have (Beta / Post-1.0)
 - [ ] Mehrere Savegame-Slots (5 geplant)
-- [ ] Mehrere Maps mit unterschiedlichen Grid-Größen
-- [ ] Gesperrte Felder auf dem Grid
-- [ ] Bodenabhängigkeiten für Gebäude
+- [x] Mehrere Maps (unabhängig tickend) – unterschiedliche Grid-**Größen** pro Map noch offen
+- [x] Gesperrte Felder auf dem Grid (Mountain-Tile)
+- [x] Bodenabhängigkeiten für Gebäude (Water Pump nur auf Shore)
 - [ ] Upgrade-Kategorien / Gruppierung
 - [ ] Upgrades durch Forschung freischalten
-- [ ] Bonusticks
+- [x] Bonusticks
 - [ ] Prestige-/Reset-System
 - [ ] Weitere Spielmodi
 - [ ] 2-Feld Reaktoren (Thorium, Protactium)
