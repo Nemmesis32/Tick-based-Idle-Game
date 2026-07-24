@@ -18,6 +18,8 @@ config/icon="res://icon.svg"
 [autoload]
 
 SaveManager="*uid://d36coy800b2vp"
+GameState="*uid://d2ue58xxb2t57"
+MapManager="*uid://dkqgiutpotc1c"
 
 [display]
 

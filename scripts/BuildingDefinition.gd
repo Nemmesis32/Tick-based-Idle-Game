@@ -45,6 +45,7 @@ var tags : Array = []
 var building_type : type = type.NONE
 var display_name : String = ""
 var cost : BigNumber = BigNumber.from_float(0.0)
+var requires_shore : bool = false
 
 # Heat
 var heat_production : BigNumber = BigNumber.from_float(0.0)

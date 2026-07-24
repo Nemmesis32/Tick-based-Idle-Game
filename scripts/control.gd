@@ -1,40 +1,35 @@
 extends Control
 
-const DIRECTIONS = [
-	Vector2i(0, -1), # oben
-	Vector2i(1, 0),  # rechts
-	Vector2i(0, 1),  # unten
-	Vector2i(-1, 0)  # links
-]
-
-
 var selected_building : BuildingDefinition
-var reactor_grid = []
-var grid_width = 24
-var grid_height = 13
-var research_points : BigNumber = BigNumber.from_float(0.0)
-var stored_energy : BigNumber = BigNumber.from_float(0.0)
-var max_storage : BigNumber = BigNumber.from_float(100.0)
-var credits : BigNumber = BigNumber.from_float(100.0)
 var building_list_cache : Dictionary = {}
-var upgrades : Array[UpgradeDefinition] = []
 var upgrade_mode : bool = false
-var research : Array[ResearchDefinition] = []
 var research_panel_instance = null
 var research_panel_scene = preload("res://scenes/research_panel.tscn")
-var ticks_per_second : int = 1
-var bonus_ticks : int = 5000
-var bonus_ticks_running : bool = false
-var is_paused : bool = false
-var is_fast : bool = false
-var auto_rebuild_enabled : bool = true
+var upgrade_panel_instance = null
+var upgrade_panel_scene = preload("res://scenes/upgrade_panel.tscn")
+var map_overview_panel : Control = null
+var map_overview_card_grid : GridContainer = null
+var showing_overview : bool = true
+var overlay_event_text : String = ""
 
-enum TileType {GRASS, WATER, SHORE}
-var grid_terrain: Array = []
+var texture_grass = preload("res://assets/terrain/Gras Tile.png")
+var texture_water = preload("res://assets/terrain/Water Tile (2).png")
 
-var texture_grass = preload("res://assets/terrain/Grass.png")
-var texture_water = preload("res://assets/terrain/Water.png")
-var texture_shore = preload("res://assets/terrain/Shore.png")
+# Shore-Autotile-Set: Name = Richtung, in der Wasser liegt (siehe get_shore_texture())
+var texture_shore_n = preload("res://assets/terrain/shore/Shore top.png")
+var texture_shore_s = preload("res://assets/terrain/shore/Shore down.png")
+var texture_shore_e = preload("res://assets/terrain/shore/Shore right 5.png")
+var texture_shore_w = preload("res://assets/terrain/shore/Shore left.png")
+var texture_shore_ne = preload("res://assets/terrain/shore/Shore UpRight.png")
+var texture_shore_nw = preload("res://assets/terrain/shore/Shore UpLeft.png")
+var texture_shore_se = preload("res://assets/terrain/shore/Shore downRight.png")
+var texture_shore_sw = preload("res://assets/terrain/shore/Shore down_left.png")
+var texture_shore_ns = preload("res://assets/terrain/shore/Shore parallel.png")
+var texture_shore_ew = preload("res://assets/terrain/shore/Shore parallel_UP.png")
+var texture_shore_nes = preload("res://assets/terrain/shore/Shore U_right.png")
+var texture_shore_esw = preload("res://assets/terrain/shore/Shore U_Down.png")
+var texture_shore_nsw = preload("res://assets/terrain/shore/Shore U_left.png")
+var texture_shore_new = preload("res://assets/terrain/shore/Shore U_Up.png")
 
 
 @onready var header_row = $"MarginContainer/RootVbox/HeaderRow"
@@ -59,16 +54,18 @@ var texture_shore = preload("res://assets/terrain/Shore.png")
 @onready var fast_button = $MarginContainer/RootVbox/HeaderRow/ControlBox/VBoxContainer/SpeedRow/Fast
 @onready var bonus_tick_label = $MarginContainer/RootVbox/HeaderRow/ControlBox/VBoxContainer/BonusTicksLabel
 @onready var auto_rebuild_button = $MarginContainer/RootVbox/HeaderRow/ControlBox/VBoxContainer/HBoxContainer/Button
+@onready var overlay_label = $"MarginContainer/RootVbox/HeaderRow/OverlayBox/OverlayLabel"
 
 
-func _ready():
-	reactor_grid_container.columns = grid_width
-	create_grid_data()
+func _ready() -> void:
+	MapManager.add_map("main", "Hauptinsel", 24, 13, "main")
+	var second_map = MapManager.add_map("second", "Zweite Insel", 24, 13, "second")
+	second_map.is_unlocked = false
+	second_map.unlock_cost = BigNumber.from_float(100000000.0)
+	reactor_grid_container.columns = active_map().grid_width
 	build_grid()
-	upgrades = UpgradeDatabase.get_all_upgrades()
 	power_plants_tab.pressed.connect(_on_nav_power_plants)
 	upgrade_tab.pressed.connect(_on_nav_upgrades)
-	research = ResearchDatabase.get_all_research()
 	research_tab.pressed.connect(_on_nav_research)
 	building_list_cache = _build_building_list()
 	selected_building = building_list_cache["Generatoren"][0][1]
@@ -90,11 +87,197 @@ func _ready():
 	add_child(bonus_timer)
 	bonus_timer.wait_time = 1.0 / 30.0
 	bonus_timer.timeout.connect(_on_bonus_tick)
+	var overlay_event_timer = Timer.new()
+	overlay_event_timer.name = "OverlayEventTimer"
+	overlay_event_timer.one_shot = true
+	add_child(overlay_event_timer)
+	overlay_event_timer.timeout.connect(_on_overlay_event_expired)
 	get_tree().set_auto_accept_quit(false)
 	await get_tree().process_frame
 	load_game()
+	build_map_overview_panel()
 	update_ui(get_total_energy_production(), get_effective_max_storage())
+	_on_nav_power_plants()
 
+
+func active_map() -> MapState:
+	return MapManager.get_active_map()
+
+
+func _is_water_at(map: MapState, x: int, y: int) -> bool:
+	if x < 0 or y < 0 or x >= map.grid_width or y >= map.grid_height:
+		return true  # außerhalb vom Grid zählt als Wasser (Insel-Rand)
+	return map.grid_terrain[map.coords_to_index(x, y)] == MapState.TileType.WATER
+
+
+func get_shore_texture(map: MapState, index: int) -> Texture2D:
+	var pos = map.index_to_coords(index)
+	var water_n = _is_water_at(map, pos.x, pos.y - 1)
+	var water_e = _is_water_at(map, pos.x + 1, pos.y)
+	var water_s = _is_water_at(map, pos.x, pos.y + 1)
+	var water_w = _is_water_at(map, pos.x - 1, pos.y)
+
+	var mask = 0
+	if water_n:
+		mask |= 1
+	if water_e:
+		mask |= 2
+	if water_s:
+		mask |= 4
+	if water_w:
+		mask |= 8
+
+	match mask:
+		1: return texture_shore_n
+		2: return texture_shore_e
+		4: return texture_shore_s
+		8: return texture_shore_w
+		3: return texture_shore_ne
+		9: return texture_shore_nw
+		6: return texture_shore_se
+		12: return texture_shore_sw
+		5: return texture_shore_ns
+		10: return texture_shore_ew
+		7: return texture_shore_nes
+		14: return texture_shore_esw
+		13: return texture_shore_nsw
+		11: return texture_shore_new
+		_: return texture_shore_n  # Rand-Fall: 0 oder 4 Wasser-Nachbarn, kein passendes Sprite
+
+
+func build_map_overview_panel() -> void:
+	if map_overview_panel != null:
+		map_overview_panel.queue_free()
+		map_overview_panel = null
+		map_overview_card_grid = null
+
+	map_overview_panel = Control.new()
+	map_overview_panel.name = "MapOverviewPanel"
+	map_overview_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	map_overview_panel.visible = false
+
+	var background = ColorRect.new()
+	background.color = Color(0.14, 0.14, 0.16)
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	map_overview_panel.add_child(background)
+
+	get_tree().root.add_child.call_deferred(map_overview_panel)
+
+	var margin = MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 40)
+	margin.add_theme_constant_override("margin_top", 40)
+	margin.add_theme_constant_override("margin_right", 40)
+	margin.add_theme_constant_override("margin_bottom", 40)
+	map_overview_panel.add_child(margin)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 16)
+	margin.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "Deine Maps"
+	title.add_theme_font_size_override("font_size", 28)
+	vbox.add_child(title)
+
+	map_overview_card_grid = GridContainer.new()
+	map_overview_card_grid.columns = 3
+	map_overview_card_grid.add_theme_constant_override("h_separation", 20)
+	map_overview_card_grid.add_theme_constant_override("v_separation", 20)
+	vbox.add_child(map_overview_card_grid)
+
+	for map in MapManager.maps:
+		map_overview_card_grid.add_child(_build_map_card(map))
+
+
+func _build_map_card(map: MapState) -> Control:
+	var card = PanelContainer.new()
+	card.custom_minimum_size = Vector2(240, 150)
+
+	var inner = VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 6)
+	card.add_child(inner)
+
+	var name_label = Label.new()
+	name_label.text = map.display_name
+	name_label.add_theme_font_size_override("font_size", 18)
+	inner.add_child(name_label)
+
+	if not map.is_unlocked:
+		var lock_label = Label.new()
+		lock_label.name = "LockLabel"
+		lock_label.text = "🔒 Gesperrt"
+		inner.add_child(lock_label)
+
+		var cost_label = Label.new()
+		cost_label.name = "CostLabel"
+		cost_label.text = "Kosten: " + map.unlock_cost.to_display_string()
+		inner.add_child(cost_label)
+
+		var unlock_btn = Button.new()
+		unlock_btn.name = "ActionButton"
+		unlock_btn.text = "Freischalten"
+		unlock_btn.disabled = GameState.credits.is_less_than(map.unlock_cost)
+		unlock_btn.pressed.connect(_on_map_unlock_pressed.bind(map.id))
+		inner.add_child(unlock_btn)
+	else:
+		var energy_label = Label.new()
+		energy_label.name = "EnergyLabel"
+		energy_label.text = "Energie/Tick: " + map.last_total_production.to_display_string()
+		inner.add_child(energy_label)
+
+		var research_label = Label.new()
+		research_label.name = "ResearchLabel"
+		research_label.text = "Forschung/Tick: " + map.last_research_production.to_display_string()
+		inner.add_child(research_label)
+
+		var enter_btn = Button.new()
+		enter_btn.name = "ActionButton"
+		enter_btn.text = "Öffnen"
+		enter_btn.pressed.connect(_on_map_card_pressed.bind(map.id))
+		inner.add_child(enter_btn)
+
+	return card
+
+
+func _on_map_unlock_pressed(map_id: String) -> void:
+	var map = MapManager.get_map_by_id(map_id)
+	if map == null or map.is_unlocked:
+		return
+	if GameState.credits.is_less_than(map.unlock_cost):
+		return
+	GameState.credits = GameState.credits.subtract(map.unlock_cost)
+	map.is_unlocked = true
+	build_map_overview_panel()
+	map_overview_panel.visible = true
+	show_overlay_event(map.display_name + " freigeschaltet!")
+
+
+func refresh_map_overview_cards() -> void:
+	if map_overview_panel == null or not map_overview_panel.visible:
+		return
+	var cards = map_overview_card_grid.get_children()
+	for i in range(MapManager.maps.size()):
+		var map = MapManager.maps[i]
+		var inner = cards[i].get_child(0)
+		if map.is_unlocked:
+			inner.get_node("EnergyLabel").text = "Energie/Tick: " + map.last_total_production.to_display_string()
+			inner.get_node("ResearchLabel").text = "Forschung/Tick: " + map.last_research_production.to_display_string()
+		else:
+			inner.get_node("ActionButton").disabled = GameState.credits.is_less_than(map.unlock_cost)
+
+
+func _on_map_card_pressed(map_id: String) -> void:
+	if not MapManager.set_active_map_by_id(map_id):
+		return
+	showing_overview = false
+	map_overview_panel.visible = false
+	get_node("MarginContainer").visible = true
+	reactor_grid_container.columns = active_map().grid_width
+	build_grid()
+	await get_tree().process_frame
+	refresh_grid_visuals()
+	update_ui(get_total_energy_production(), get_effective_max_storage())
 
 
 func _notification(what: int) -> void:
@@ -102,19 +285,12 @@ func _notification(what: int) -> void:
 		save_game()
 		get_tree().quit()
 
-func create_grid_data():
-	reactor_grid.clear()
-	grid_terrain.clear()
-	for i in range(grid_width * grid_height):
-		reactor_grid.append(null)
-		grid_terrain.append(TileType.WATER)
-	apply_map_terrain()
 
-
-func build_grid():
+func build_grid() -> void:
 	for child in reactor_grid_container.get_children():
 		child.queue_free()
 	await get_tree().process_frame
+	var map := active_map()
 	var available_width = (
 		get_viewport_rect().size.x
 		- components_panel.size.x
@@ -128,23 +304,27 @@ func build_grid():
 		- 65
 	)
 	var cell_size = min(
-		available_width / grid_width,
-		available_height / grid_height
+		available_width / map.grid_width,
+		available_height / map.grid_height
 	)
-	for i in range(grid_width * grid_height):
+	for i in range(map.grid_width * map.grid_height):
 		var button = Button.new()
 		button.custom_minimum_size = Vector2(cell_size, cell_size)
 		button.set_meta("grid_index", i)
 		button.gui_input.connect(_on_grid_button_input.bind(button))
+		button.mouse_entered.connect(_on_grid_button_hover.bind(button))
+		button.mouse_exited.connect(_on_grid_button_unhover)
 		button.text = ""
 		var style = StyleBoxTexture.new()
-		match grid_terrain[i]:
-			TileType.GRASS:
+		match map.grid_terrain[i]:
+			MapState.TileType.GRASS:
 				style.texture = texture_grass
-			TileType.WATER:
+			MapState.TileType.WATER:
 				style.texture = texture_water
-			TileType.SHORE:
-				style.texture = texture_shore
+			MapState.TileType.SHORE:
+				style.texture = get_shore_texture(map, i)
+			MapState.TileType.MOUNTAIN:
+				style.texture = texture_grass  # TODO: eigenes Mountain-Sprite, sobald vorhanden
 		style.texture_margin_left = 0
 		style.texture_margin_right = 0
 		style.texture_margin_top = 0
@@ -225,39 +405,6 @@ func _build_building_list() -> Dictionary:
 		],
 	}
 
-func apply_map_terrain():
-	for i in range(grid_terrain.size()):
-		grid_terrain[i] = TileType.WATER
-	
-	var grass_tiles = [
-		# Kleine Insel oben links (langgezogen)
-		26, 27, 28,
-
-		# Hauptinsel mittig
-		56, 57, 58,
-		80, 81, 82, 83,
-		104, 105, 106, 107, 108,
-		128, 129, 130, 131, 132,
-		152, 153, 154, 155,
-		176, 177, 178,
-
-		# Neue Insel oben rechts (aus Ghosts)
-		43, 44,
-		68, 69,
-		93,
-
-		# Mittlere Insel rechts
-		184, 185,
-		208, 209,
-
-		# Neue Insel unten links (aus Ghosts)
-		218,
-		242, 243, 
-		267,
-	]
-	for idx in grass_tiles:
-		grid_terrain[idx] = TileType.GRASS
-
 
 func _on_category_tab_pressed(category: String) -> void:
 	for child in building_list.get_children():
@@ -266,7 +413,7 @@ func _on_category_tab_pressed(category: String) -> void:
 	for entry in category_buildings:
 		var def = entry[1]
 		# Gesperrte Gebäude nicht anzeigen
-		if def.required_research != "" and not is_researched(def.required_research):
+		if def.required_research != "" and not GameState.is_researched(def.required_research):
 			continue
 		var btn = Button.new()
 		btn.text = entry[0] + "  [" + def.cost.to_display_string() + "]"
@@ -282,401 +429,92 @@ func _on_building_select(def: BuildingDefinition) -> void:
 
 
 func _on_building_hover(def: BuildingDefinition) -> void:
-	tooltip_label.text = (
-		def.display_name
-		+ "\nKosten: " + def.cost.to_display_string()
-		+ "\nHitze: " + def.heat_production.to_display_string()
-		+ "\nVerarbeitung: " + def.energy_processing.to_display_string()
-	)
+	tooltip_label.text = _build_building_tooltip(def)
 
 
-func index_to_coords(index: int) -> Vector2i:
-	var x = index % grid_width
-	@warning_ignore("integer_division")
-	var y = int(index / grid_width)
-	return Vector2i(x, y)
+func _build_building_tooltip(def: BuildingDefinition) -> String:
+	var stats = active_map().get_effective_building_stats(def)
+	var lines : Array[String] = []
+	lines.append(def.display_name)
+	lines.append("Kosten: " + def.cost.to_display_string())
+
+	if stats.has("lifespan"):
+		lines.append("Lebensdauer: " + str(stats["lifespan"]) + " Ticks")
+
+	if stats.has("heat_production"):
+		lines.append("Hitze-Produktion: " + stats["heat_production"].to_display_string() + "/Tick")
+	if stats.has("max_heat"):
+		lines.append("Max. Hitze: " + stats["max_heat"].to_display_string())
+	if stats.has("heat_transfer_rate"):
+		lines.append("Hitze-Transfer: " + str(int(stats["heat_transfer_rate"] * 100)) + "%/Tick")
+
+	if stats.has("water_production"):
+		lines.append("Wasser-Produktion: " + stats["water_production"].to_display_string() + "/Tick")
+	if stats.has("max_water"):
+		lines.append("Max. Wasser: " + stats["max_water"].to_display_string())
+	if stats.has("water_transfer_rate"):
+		lines.append("Wasser-Transfer: " + str(int(stats["water_transfer_rate"] * 100)) + "%/Tick")
+	if stats.has("water_consumption"):
+		lines.append("Wasser-Verbrauch: " + stats["water_consumption"].to_display_string() + "/Tick")
+	if stats.has("water_boost_amount"):
+		lines.append("Wasser-Boost-Kapazität: +" + stats["water_boost_amount"].to_display_string())
+
+	if stats.has("energy_production"):
+		lines.append("Energie-Produktion: " + stats["energy_production"].to_display_string() + "/Tick")
+	if stats.has("energy_processing"):
+		lines.append("Verarbeitung: " + stats["energy_processing"].to_display_string() + "/Tick")
+	if stats.has("energy_loss"):
+		lines.append("Hitze-Vernichtung: " + str(int(stats["energy_loss"] * 100)) + "%/Tick")
+
+	if stats.has("research_production"):
+		lines.append("Forschung: " + stats["research_production"].to_display_string() + "/Tick")
+
+	if stats.has("sell_amount"):
+		lines.append("Verkauf: " + stats["sell_amount"].to_display_string() + "/Tick")
+
+	if stats.has("heat_boost"):
+		lines.append("Hitze-Boost Nachbarn: +" + str(int(stats["heat_boost"] * 100)) + "%")
+	if stats.has("water_boost"):
+		lines.append("Wasser-Boost Nachbarn: +" + str(int(stats["water_boost"] * 100)) + "%")
+	if stats.has("sell_amount_boost"):
+		lines.append("Verkaufs-Boost Nachbarn: +" + str(int(stats["sell_amount_boost"] * 100)) + "%")
+	if stats.has("additional_storage"):
+		lines.append("Zusatz-Speicher: +" + str(int(stats["additional_storage"] * 100)))
+
+	if def.requires_shore:
+		lines.append("⚓ Nur auf Shore bebaubar")
+
+	if not def.tags.is_empty():
+		lines.append("Tags: " + ", ".join(def.tags))
+
+	return "\n".join(lines)
 
 
-func coords_to_index(x: int, y: int) -> int:
-	return y * grid_width + x
-
-
-func get_neighbor_indices(index: int) -> Array[int]:
-	var neighbors : Array[int] = []
-	var pos = index_to_coords(index)
-	for dir in DIRECTIONS:
-		var check_pos = pos + dir
-		if check_pos.x < 0:
-			continue
-		if check_pos.y < 0:
-			continue
-		if check_pos.x >= grid_width:
-			continue
-		if check_pos.y >= grid_height:
-			continue
-		neighbors.append(coords_to_index(check_pos.x, check_pos.y))
-	return neighbors
-
-
-func process_heat():
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if building.is_ghost:
-			continue
-		if building.definition.heat_production.is_zero():
-			continue
-		var neighbors = get_neighbor_indices(i)
-		var valid_neighbors = []
-		for neighbor_index in neighbors:
-			var neighbor = reactor_grid[neighbor_index]
-			if neighbor == null:
-				continue
-			if neighbor.definition.tags.has("heat_producer"):
-				continue
-			if neighbor.definition.tags.has("heat_immune"):
-				continue
-			valid_neighbors.append(neighbor_index)
-		if valid_neighbors.is_empty():
-			building.current_heat = building.current_heat.add(building.definition.heat_production)
-			continue
-		var upgrade_mult = get_upgrade_multiplier(
-			UpgradeDefinition.target_type.BUILDING_TYPE,
-			building.definition.building_type,
-			UpgradeDefinition.stat_type.HEAT_PRODUCTION
-		)
-		var upgraded_production = building.definition.heat_production.multiply_float(upgrade_mult)
-		var boost = get_boost_for_building(i, "booster", "heat_boost")
-		var final_production = upgraded_production.multiply_float(1.0 + boost)
-		var heat_share = final_production.divide_float(valid_neighbors.size())
-		for neighbor_index in valid_neighbors:
-			var neighbor = reactor_grid[neighbor_index]
-			neighbor.current_heat = neighbor.current_heat.add(heat_share)
-
-
-func process_overheat():
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if building.definition.max_heat.is_zero():
-			continue
-		if building.current_heat.is_greater_or_equal(building.definition.max_heat):
-			print("Überhitzung bei Index", i, "-", building.definition.display_name)
-			reactor_grid[i] = null
-
-
-func process_water():
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if building.definition.water_production.is_zero() and building.definition.water_transfer_rate <= 0:
-			continue
-		if building.definition.tags.has("water_transfer"):
-			continue
-		if not building.definition.water_production.is_zero():
-			building.current_water = building.current_water.add(building.definition.water_production).min_with(building.definition.max_water)
-		if building.current_water.is_zero():
-			continue
-		var neighbors = get_neighbor_indices(i)
-		var valid_neighbors = []
-		for neighbor_index in neighbors:
-			var neighbor = reactor_grid[neighbor_index]
-			if neighbor == null:
-				continue
-			if neighbor.definition.max_water.is_zero():
-				continue
-			if neighbor.definition.tags.has("water_producer"):
-				continue
-			if neighbor.current_water.is_greater_or_equal(neighbor.definition.max_water):
-				continue
-			valid_neighbors.append(neighbor_index)
-		if valid_neighbors.is_empty():
-			continue
-		var total_transfer = building.definition.max_water.multiply_float(building.definition.water_transfer_rate).min_with(building.current_water)
-		var water_share = total_transfer.divide_float(valid_neighbors.size())
-		for neighbor_index in valid_neighbors:
-			var neighbor = reactor_grid[neighbor_index]
-			var room_left = neighbor.definition.max_water.subtract(neighbor.current_water)
-			var actual_share = water_share.min_with(room_left)
-			neighbor.current_water = neighbor.current_water.add(actual_share)
-			building.current_water = building.current_water.subtract(actual_share)
-
-
-func process_heat_pipes():
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if building.definition.heat_transfer_rate <= 0:
-			continue
-		if building.current_heat.is_zero():
-			continue
-
-		# Additives Upgrade mit Cap bei 1.0
-		var effective_transfer = min(
-			building.definition.heat_transfer_rate + get_upgrade_additive(
-				UpgradeDefinition.target_type.BUILDING_TYPE,
-				building.definition.building_type,
-				UpgradeDefinition.stat_type.HEAT_TRANSFER_RATE
-			), 1.0
-		)
-
-		var neighbors = get_neighbor_indices(i)
-		var valid_neighbors = []
-		for neighbor_index in neighbors:
-			var neighbor = reactor_grid[neighbor_index]
-			if neighbor == null:
-				continue
-			if neighbor.definition.max_heat.is_zero():
-				continue
-			if neighbor.definition.tags.has("heat_producer"):
-				continue
-			if neighbor.current_heat.is_greater_or_equal(building.current_heat):
-				continue
-			valid_neighbors.append(neighbor_index)
-
-		if valid_neighbors.is_empty():
-			continue
-
-		var transfer_amount = building.definition.max_heat.multiply_float(effective_transfer).min_with(building.current_heat)
-		var heat_share = transfer_amount.divide_float(valid_neighbors.size())
-
-		for neighbor_index in valid_neighbors:
-			var neighbor = reactor_grid[neighbor_index]
-			neighbor.current_heat = neighbor.current_heat.add(heat_share).min_with(neighbor.definition.max_heat)
-
-		building.current_heat = building.current_heat.subtract(transfer_amount)
-
-
-func process_water_pipes():
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if building.definition.water_transfer_rate <= 0:
-			continue
-		if not building.definition.tags.has("water_transfer"):
-			continue
-		if building.current_water.is_zero():
-			continue
-
-		# Additives Upgrade mit Cap bei 1.0
-		var effective_transfer = min(
-			building.definition.water_transfer_rate + get_upgrade_additive(
-				UpgradeDefinition.target_type.BUILDING_TYPE,
-				building.definition.building_type,
-				UpgradeDefinition.stat_type.WATER_TRANSFER_RATE
-			), 1.0
-		)
-
-		var neighbors = get_neighbor_indices(i)
-		var valid_neighbors = []
-		for neighbor_index in neighbors:
-			var neighbor = reactor_grid[neighbor_index]
-			if neighbor == null:
-				continue
-			if neighbor.definition.max_water.is_zero():
-				continue
-			if neighbor.definition.tags.has("water_producer"):
-				continue
-			if neighbor.current_water.is_greater_or_equal(neighbor.definition.max_water):
-				continue
-			valid_neighbors.append(neighbor_index)
-
-		if valid_neighbors.is_empty():
-			continue
-
-		var transfer_amount = building.definition.max_water.multiply_float(effective_transfer).min_with(building.current_water)
-		var water_share = transfer_amount.divide_float(valid_neighbors.size())
-
-		var actually_transferred = BigNumber.from_float(0.0)
-		for neighbor_index in valid_neighbors:
-			var neighbor = reactor_grid[neighbor_index]
-			var room_left = neighbor.definition.max_water.subtract(neighbor.current_water)
-			var actual_share = water_share.min_with(room_left)
-			neighbor.current_water = neighbor.current_water.add(actual_share)
-			actually_transferred = actually_transferred.add(actual_share)
-		building.current_water = building.current_water.subtract(actually_transferred)
-
-
-func process_generators() -> BigNumber:
-	var generated = BigNumber.from_float(0.0)
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if building.definition.energy_processing.is_zero():
-			continue
-		var processing_upgrade_mult = get_upgrade_multiplier(
-			UpgradeDefinition.target_type.BUILDING_TYPE,
-			building.definition.building_type,
-			UpgradeDefinition.stat_type.ENERGY_PROCESSING
-		)
-		var max_heat_upgrade_mult = get_upgrade_multiplier(
-			UpgradeDefinition.target_type.BUILDING_TYPE,
-			building.definition.building_type,
-			UpgradeDefinition.stat_type.MAX_HEAT
-		)
-		var max_water_upgrade_mult = get_upgrade_multiplier(
-			UpgradeDefinition.target_type.BUILDING_TYPE,
-			building.definition.building_type,
-			UpgradeDefinition.stat_type.MAX_WATER
-		)
-		var processing_capacity = building.definition.energy_processing.multiply_float(processing_upgrade_mult)
-		var effective_max_heat = building.definition.max_heat.multiply_float(max_heat_upgrade_mult)
-		var effective_max_water = building.definition.max_water.multiply_float(max_water_upgrade_mult)
-		var water_boost = get_boost_for_building(i, "booster", "water_boost")
-		effective_max_water = effective_max_water.multiply_float(1.0 + water_boost)
-		while (
-			building.current_heat.is_greater_than(processing_capacity)
-			and not building.definition.water_consumption.is_zero()
-			and building.current_water.is_greater_or_equal(building.definition.water_consumption)
-		):
-			building.current_water = building.current_water.subtract(building.definition.water_consumption)
-			processing_capacity = processing_capacity.add(building.definition.water_boost_amount)
-		var processable = building.current_heat.min_with(processing_capacity).min_with(effective_max_heat)
-		building.current_heat = building.current_heat.subtract(processable)
-		generated = generated.add(processable)
-	return generated
-
-
-func process_heat_sink():
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if not building.definition.tags.has("heat_sink"):
-			continue
-		if building.current_heat.is_zero():
-			continue
-		var dissipated = building.current_heat.multiply_float(building.definition.energy_loss)
-		building.current_heat = building.current_heat.subtract(dissipated)
-
-
-func get_total_sell_capacity() -> BigNumber:
-	var total = BigNumber.from_float(0.0)
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if not building.definition.tags.has("energy_seller"):
-			continue
-		var upgrade_mult = get_upgrade_multiplier(
-			UpgradeDefinition.target_type.BUILDING_TYPE,
-			building.definition.building_type,
-			UpgradeDefinition.stat_type.SELL_AMOUNT,
-			building.definition.tags
-			)
-		var upgraded_sell = building.definition.sell_amount.multiply_float(upgrade_mult)
-		var boost = get_boost_for_building(i, "booster", "sell_amount_boost")
-		var effective_sell = upgraded_sell.multiply_float(1.0 + boost)
-		total = total.add(effective_sell)
-	return total
-
-func get_effective_lifespan(building: Building) -> int:
-	if building.definition.lifespan == -1:
-		return -1
-	var mult = get_upgrade_multiplier(
-		UpgradeDefinition.target_type.BUILDING_TYPE,
-		building.definition.building_type,
-		UpgradeDefinition.stat_type.LIFESPAN
-	)
-	return int(float(building.definition.lifespan) * mult)
-
-
-func process_research():
-	for building in reactor_grid:
-		if building == null:
-			continue
-		if not building.definition.tags.has("research_producer"):
-			continue
-		research_points = research_points.add(building.definition.research_production)
-
-
-func get_boost_for_building(index: int, boost_tag: String, boost_field: String) -> float:
-	var total_boost := 0.0
-	var neighbors = get_neighbor_indices(index)
-	for neighbor_index in neighbors:
-		var neighbor = reactor_grid[neighbor_index]
-		if neighbor == null:
-			continue
-		if not neighbor.definition.tags.has("booster"):
-			continue
-		match boost_field:
-			"heat_boost":
-				if neighbor.definition.heat_boost > 0:
-					var upgrade_mult = get_upgrade_multiplier(
-						UpgradeDefinition.target_type.BUILDING_TYPE,
-						neighbor.definition.building_type,
-						UpgradeDefinition.stat_type.HEAT_BOOST
-					)
-					var upgrade_add = get_upgrade_additive(
-						UpgradeDefinition.target_type.BUILDING_TYPE,
-						neighbor.definition.building_type,
-						UpgradeDefinition.stat_type.HEAT_BOOST
-					)
-					total_boost += (neighbor.definition.heat_boost + upgrade_add) * upgrade_mult
-			"water_boost":
-				if neighbor.definition.water_boost > 0:
-					var upgrade_mult = get_upgrade_multiplier(
-						UpgradeDefinition.target_type.BUILDING_TYPE,
-						neighbor.definition.building_type,
-						UpgradeDefinition.stat_type.WATER_BOOST
-					)
-					total_boost += neighbor.definition.water_boost * upgrade_mult
-			"sell_amount_boost":
-				if neighbor.definition.sell_amount_boost > 0:
-					var upgrade_mult = get_upgrade_multiplier(
-						UpgradeDefinition.target_type.BUILDING_TYPE,
-						neighbor.definition.building_type,
-						UpgradeDefinition.stat_type.SELL_AMOUNT_BOOST
-					)
-					total_boost += neighbor.definition.sell_amount_boost * upgrade_mult
-	return total_boost
-
-
-func get_effective_max_storage() -> BigNumber:
-	var total = max_storage
-	var upgrade_mult = get_upgrade_multiplier(
-		UpgradeDefinition.target_type.GLOBAL,
-		BuildingDefinition.type.NONE,
-		UpgradeDefinition.stat_type.ADDITIONAL_STORAGE
-	)
-	total = total.multiply_float(upgrade_mult)
-	for building in reactor_grid:
-		if building == null:
-			continue
-		if building.definition.additional_storage <= 0:
-			continue
-		total = total.add(BigNumber.from_float(building.definition.additional_storage * 100.0))
-	return total
-
-
-func refresh_grid_visuals():
+func refresh_grid_visuals() -> void:
+	var map := active_map()
 	var buttons = reactor_grid_container.get_children()
 	var fill_bar_types = [
 		BuildingDefinition.type.WATER_PUMP,
 		BuildingDefinition.type.WATER_PIPE,
 		BuildingDefinition.type.HEAT_PIPE,
 	]
-	for i in range(reactor_grid.size()):
+	for i in range(map.reactor_grid.size()):
 		var button = buttons[i]
-		var building = reactor_grid[i]
+		var building = map.reactor_grid[i]
 		var fill_bar = button.get_node("FillBar")
 		var life_bar = button.get_node("LifeBar")
 
 		# Terrain-Textur immer als Hintergrund setzen
 		var style = StyleBoxTexture.new()
-		match grid_terrain[i]:
-			TileType.GRASS:
+		match map.grid_terrain[i]:
+			MapState.TileType.GRASS:
 				style.texture = texture_grass
-			TileType.WATER:
+			MapState.TileType.WATER:
 				style.texture = texture_water
-			TileType.SHORE:
-				style.texture = texture_shore
+			MapState.TileType.SHORE:
+				style.texture = get_shore_texture(map, i)
+			MapState.TileType.MOUNTAIN:
+				style.texture = texture_grass  # TODO: eigenes Mountain-Sprite, sobald vorhanden
 		style.texture_margin_left = 0
 		style.texture_margin_right = 0
 		style.texture_margin_top = 0
@@ -713,10 +551,10 @@ func refresh_grid_visuals():
 			life_bar.visible = false
 		else:
 			life_bar.visible = true
-			var effective_lifespan = get_effective_lifespan(building)
+			var effective_lifespan = map.get_effective_lifespan(building)
 			life_bar.value = (1.0 - float(building.age) / float(effective_lifespan)) * 100
 			life_bar.modulate = Color.YELLOW
-			
+
 		match building.definition.building_type:
 			BuildingDefinition.type.WIND_TURBINE:
 				button.text = "[WT]"
@@ -797,91 +635,85 @@ func _on_grid_button_input(event: InputEvent, button: Button) -> void:
 	handle_grid_click(event, index)
 
 
+func _on_grid_button_hover(button: Button) -> void:
+	var index = button.get_meta("grid_index")
+	var building = active_map().reactor_grid[index]
+	if building == null:
+		return
+	overlay_label.text = _build_building_status(building)
+
+
+func _on_grid_button_unhover() -> void:
+	overlay_label.text = overlay_event_text
+
+
+func _build_building_status(building: Building) -> String:
+	var parts : Array[String] = []
+	parts.append(building.definition.display_name)
+	if not building.definition.max_heat.is_zero():
+		parts.append("Hitze: " + building.current_heat.to_display_string() + " / " + building.definition.max_heat.to_display_string())
+	if not building.definition.max_water.is_zero():
+		parts.append("Wasser: " + building.current_water.to_display_string() + " / " + building.definition.max_water.to_display_string())
+	if building.definition.lifespan != -1:
+		var effective_lifespan = active_map().get_effective_lifespan(building)
+		var remaining = max(effective_lifespan - building.age, 0)
+		parts.append("Restlaufzeit: " + str(remaining) + " Ticks")
+	if building.is_ghost:
+		parts.append("⚠ Ausgelaufen")
+	return " | ".join(parts)
+
+
+func show_overlay_event(text: String, duration: float = 4.0) -> void:
+	overlay_event_text = text
+	overlay_label.text = overlay_event_text
+	$OverlayEventTimer.stop()
+	$OverlayEventTimer.wait_time = duration
+	$OverlayEventTimer.start()
+
+
+func _on_overlay_event_expired() -> void:
+	overlay_event_text = ""
+	overlay_label.text = ""
+
+
 func _on_sell_energy_pressed() -> void:
-	credits = credits.add(stored_energy)
-	stored_energy = BigNumber.from_float(0.0)
+	var map := active_map()
+	GameState.credits = GameState.credits.add(map.stored_energy)
+	map.stored_energy = BigNumber.from_float(0.0)
 	update_ui(get_total_energy_production(), get_effective_max_storage())
 
 
 func _on_tick_timer_timeout() -> void:
-	process_heat()
-	process_water()
-	process_heat_pipes()
-	process_water_pipes()
-	process_heat_sink()
-	process_research()
-	var generated = process_generators()
-	process_overheat()
-	var total_production = get_total_energy_production().add(generated)
-	var effective_storage = get_effective_max_storage()
-	var sell_capacity = get_total_sell_capacity()
-	var sold_from_production = total_production.min_with(sell_capacity)
-	credits = credits.add(sold_from_production)
-	var remaining_energy = total_production.subtract(sold_from_production)
-	var room_left = effective_storage.subtract(stored_energy)
-	stored_energy = stored_energy.add(remaining_energy.min_with(room_left))
-	var remaining_capacity = sell_capacity.subtract(sold_from_production)
-	if remaining_capacity.is_greater_than(BigNumber.from_float(0.0)):
-		var sold_from_storage = stored_energy.min_with(remaining_capacity)
-		credits = credits.add(sold_from_storage)
-		stored_energy = stored_energy.subtract(sold_from_storage)
-		
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if building.definition.lifespan == -1:
-			continue
-		building.age += 1
-		if building.age >= get_effective_lifespan(building):
-			if not building.is_ghost:
-				building.is_ghost = true
-			elif auto_rebuild_enabled and building.definition.manager_research_id != "" and is_researched(building.definition.manager_research_id):
-				if not credits.is_less_than(building.definition.cost):
-					credits = credits.subtract(building.definition.cost)
-					building.age = 0
-					building.is_ghost = false
-		
+	var tick_results = MapManager.tick_all()
+	var map := active_map()
+	var result = tick_results.get(map.id, {})
+	var total_production = result.get("total_production", BigNumber.from_float(0.0))
+	var effective_storage = result.get("effective_storage", BigNumber.from_float(0.0))
+	var events = result.get("events", [])
+	if not events.is_empty():
+		show_overlay_event(", ".join(events))
+
 	if upgrade_panel_instance != null and upgrade_panel_instance.visible:
-		upgrade_panel_instance.setup(upgrades, credits, _on_upgrade_pressed, _on_sell_upgrade_pressed, research)
+		upgrade_panel_instance.setup(map.upgrades, GameState.credits, _on_upgrade_pressed, _on_sell_upgrade_pressed, GameState.research)
 	if research_panel_instance != null and research_panel_instance.visible:
-		research_panel_instance.update_rp(research_points)
+		research_panel_instance.update_rp(GameState.research_points)
+	refresh_map_overview_cards()
 	refresh_grid_visuals()
 	update_ui(total_production, effective_storage)
 
 
 func get_total_energy_production() -> BigNumber:
-	var total = BigNumber.from_float(0.0)
-	for i in range(reactor_grid.size()):
-		var building = reactor_grid[i]
-		if building == null:
-			continue
-		if building.is_ghost:
-			continue
-		if building.definition.energy_production.is_zero():
-			continue
-		var upgrade_mult = get_upgrade_multiplier(
-			UpgradeDefinition.target_type.BUILDING_TYPE,
-			building.definition.building_type,
-			UpgradeDefinition.stat_type.ENERGY_PRODUCTION,
-			building.definition.tags
-		)
-		total = total.add(building.definition.energy_production.multiply_float(upgrade_mult))
-	return total
+	return active_map().get_total_energy_production()
+
+
+func get_effective_max_storage() -> BigNumber:
+	return active_map().get_effective_max_storage()
 
 
 func place_building(index: int) -> void:
-	if reactor_grid[index] != null and not reactor_grid[index].is_ghost:
-		return
-	if credits.is_less_than(selected_building.cost):
-		return
-	if grid_terrain[index] != TileType.GRASS:
-		return
-	credits = credits.subtract(selected_building.cost)
-	var building = Building.new(selected_building)
-	reactor_grid[index] = building
-	refresh_grid_visuals()
-	update_ui(get_total_energy_production(), get_effective_max_storage())
+	if active_map().place_building(index, selected_building):
+		refresh_grid_visuals()
+		update_ui(get_total_energy_production(), get_effective_max_storage())
 
 
 func handle_grid_click(event: InputEvent, index: int) -> void:
@@ -895,258 +727,177 @@ func handle_grid_click(event: InputEvent, index: int) -> void:
 
 
 func remove_building(index: int) -> void:
-	if reactor_grid[index] == null:
-		return
-	reactor_grid[index] = null
-	refresh_grid_visuals()
-	update_ui(get_total_energy_production(), get_effective_max_storage())
-
-
-func get_upgrade_cost(upgrade: UpgradeDefinition) -> BigNumber:
-	var exponent = upgrade.current_level
-	var multiplier = pow(upgrade.cost_multiplier, exponent)
-	return upgrade.base_cost.multiply_float(multiplier)
-
-
-func purchase_upgrade(upgrade: UpgradeDefinition) -> void:
-	if not can_purchase_upgrade(upgrade):
-		return
-	var cost = get_upgrade_cost(upgrade)
-	credits = credits.subtract(cost)
-	upgrade.current_level += 1
-	update_ui(get_total_energy_production(), get_effective_max_storage())
-
-
-func can_purchase_upgrade(upgrade: UpgradeDefinition) -> bool:
-	if upgrade.requires != "":
-		var required = get_upgrade_by_id(upgrade.requires)
-		if required == null or required.current_level == 0:
-			return false
-	if credits.is_less_than(get_upgrade_cost(upgrade)):
-		return false
-	return true
-
-
-func get_upgrade_by_id(id: String) -> UpgradeDefinition:
-	for upgrade in upgrades:
-		if upgrade.id == id:
-			return upgrade
-	return null
-
-
-func get_upgrade_multiplier(
-	target: UpgradeDefinition.target_type,
-	building_type: BuildingDefinition.type,
-	stat: UpgradeDefinition.stat_type,
-	tags: Array = []
-) -> float:
-	var total := 1.0
-	for upgrade in upgrades:
-		if upgrade.current_level == 0:
-			continue
-		if upgrade.stat != stat:
-			continue
-		match upgrade.target:
-			UpgradeDefinition.target_type.GLOBAL:
-				if target != UpgradeDefinition.target_type.GLOBAL:
-					continue
-			UpgradeDefinition.target_type.BUILDING_TYPE:
-				if target != UpgradeDefinition.target_type.BUILDING_TYPE:
-					continue
-				if upgrade.building_type != building_type:
-					continue
-			UpgradeDefinition.target_type.TAG:
-				if not tags.has(upgrade.target_tag):
-					continue
-		total += upgrade.multiplier * upgrade.current_level
-	return total
-
-
-func get_upgrade_additive(
-	target: UpgradeDefinition.target_type,
-	building_type: BuildingDefinition.type,
-	stat: UpgradeDefinition.stat_type
-) -> float:
-	var total := 0.0
-	for upgrade in upgrades:
-		if upgrade.current_level == 0:
-			continue
-		if upgrade.mode != UpgradeDefinition.upgrade_mode.ADDITIVE:
-			continue
-		if upgrade.target != target:
-			continue
-		if upgrade.target == UpgradeDefinition.target_type.BUILDING_TYPE:
-			if upgrade.building_type != building_type:
-				continue
-		if upgrade.stat != stat:
-			continue
-		total += upgrade.multiplier * upgrade.current_level
-	return total
-
-
-func sell_upgrade(upgrade: UpgradeDefinition) -> void:
-	if upgrade.current_level == 0:
-		return
-	# Kosten der aktuellen Stufe = Kosten bei current_level - 1
-	var exponent = upgrade.current_level - 1
-	var refund = upgrade.base_cost.multiply_float(
-		pow(upgrade.cost_multiplier, exponent) * 0.5
-	)
-	credits = credits.add(refund)
-	upgrade.current_level -= 1
-	if upgrade_panel_instance != null:
-		upgrade_panel_instance.setup(upgrades, credits, _on_upgrade_pressed, _on_sell_upgrade_pressed, research)
-	update_ui(get_total_energy_production(), get_effective_max_storage())
+	if active_map().remove_building(index):
+		refresh_grid_visuals()
+		update_ui(get_total_energy_production(), get_effective_max_storage())
 
 
 func _on_sell_upgrade_pressed(upgrade: UpgradeDefinition) -> void:
-	sell_upgrade(upgrade)
+	active_map().sell_upgrade(upgrade)
+	if upgrade_panel_instance != null:
+		upgrade_panel_instance.setup(active_map().upgrades, GameState.credits, _on_upgrade_pressed, _on_sell_upgrade_pressed, GameState.research)
+	update_ui(get_total_energy_production(), get_effective_max_storage())
 
-
-var upgrade_panel_instance = null
-var upgrade_panel_scene = preload("res://scenes/upgrade_panel.tscn")
 
 func _on_nav_upgrades() -> void:
 	if upgrade_panel_instance == null:
 		upgrade_panel_instance = upgrade_panel_scene.instantiate()
 		get_tree().root.add_child(upgrade_panel_instance)
-		upgrade_panel_instance.back_pressed.connect(_on_nav_power_plants)
+		upgrade_panel_instance.back_pressed.connect(_on_nav_back)
 	upgrade_panel_instance.setup(
-		upgrades,
-		credits,
+		active_map().upgrades,
+		GameState.credits,
 		_on_upgrade_pressed,
 		_on_sell_upgrade_pressed,
-		research
+		GameState.research
 			)
 	upgrade_panel_instance.visible = true
 	upgrade_panel_instance.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	get_node("MarginContainer").visible = false
-	
+
+
 func _on_nav_power_plants() -> void:
 	if upgrade_panel_instance != null:
 		upgrade_panel_instance.visible = false
 	if research_panel_instance != null:
 		research_panel_instance.visible = false
-	get_node("MarginContainer").visible = true
+	get_node("MarginContainer").visible = false
+	showing_overview = true
+	map_overview_panel.visible = true
+	refresh_map_overview_cards()
 
 
-func refresh_upgrade_ui() -> void:
-	pass
+func _on_nav_back() -> void:
+	if upgrade_panel_instance != null:
+		upgrade_panel_instance.visible = false
+	if research_panel_instance != null:
+		research_panel_instance.visible = false
+	if showing_overview:
+		map_overview_panel.visible = true
+		refresh_map_overview_cards()
+	else:
+		get_node("MarginContainer").visible = true
+		refresh_grid_visuals()
+		update_ui(get_total_energy_production(), get_effective_max_storage())
 
 
 func _on_upgrade_pressed(upgrade: UpgradeDefinition) -> void:
-	purchase_upgrade(upgrade)
+	active_map().purchase_upgrade(upgrade)
 	if upgrade_panel_instance != null:
-		upgrade_panel_instance.setup(upgrades, credits, _on_upgrade_pressed, _on_sell_upgrade_pressed, research)
-	refresh_upgrade_ui()
-	
+		upgrade_panel_instance.setup(active_map().upgrades, GameState.credits, _on_upgrade_pressed, _on_sell_upgrade_pressed, GameState.research)
+	update_ui(get_total_energy_production(), get_effective_max_storage())
+
 
 func _on_nav_research() -> void:
 	if research_panel_instance == null:
 		research_panel_instance = research_panel_scene.instantiate()
 		get_tree().root.add_child(research_panel_instance)
-		research_panel_instance.back_pressed.connect(_on_nav_power_plants)
-	research_panel_instance.setup(research, research_points, credits, _on_research_pressed)
+		research_panel_instance.back_pressed.connect(_on_nav_back)
+	research_panel_instance.setup(GameState.research, GameState.research_points, GameState.credits, _on_research_pressed)
 	research_panel_instance.visible = true
 	research_panel_instance.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	get_node("MarginContainer").visible = false
 
 
 func _on_research_pressed(item: ResearchDefinition) -> void:
-	if item.is_purchased:
+	if not GameState.purchase_research(item):
 		return
-	if item.cost_in_credits:
-		if credits.is_less_than(item.cost):
-			return
-		credits = credits.subtract(item.cost)
-	else:
-		if not item.cost.is_zero() and research_points.is_less_than(item.cost):
-			return
-		research_points = research_points.subtract(item.cost)
-	item.is_purchased = true
-	if item.id in ["chromatic_1", "chromatic_2", "chromatic_3", "chromatic_4", "chromatic_5"]:
-		ticks_per_second += 1
-		tick_timer.wait_time = 1.0 / ticks_per_second
-	research_panel_instance.setup(research, research_points, credits, _on_research_pressed)
+	tick_timer.wait_time = 1.0 / GameState.ticks_per_second
+	research_panel_instance.setup(GameState.research, GameState.research_points, GameState.credits, _on_research_pressed)
 	update_ui(get_total_energy_production(), get_effective_max_storage())
 
 
-func is_researched(research_id: String) -> bool:
-	for item in research:
-		if item.id == research_id and item.is_purchased:
-			return true
-	return false
-
-
 func save_game() -> void:
-	SaveManager.save(credits, research_points, research, reactor_grid, upgrades, bonus_ticks)
+	SaveManager.save()
+
 
 func load_game() -> void:
 	var data = SaveManager.load_save()
 	if data.is_empty():
 		return
-	credits = BigNumber.from_notation(data["credits"]["m"], data["credits"]["e"])
-	research_points = BigNumber.from_notation(data["research_points"]["m"], data["research_points"]["e"])
-	for item in research:
+
+	GameState.credits = BigNumber.from_notation(data["credits"]["m"], data["credits"]["e"])
+	GameState.research_points = BigNumber.from_notation(data["research_points"]["m"], data["research_points"]["e"])
+	for item in GameState.research:
 		if data["research_purchased"].has(item.id):
 			item.is_purchased = true
-			
-	for item in research:
-		if item.is_purchased and item.id in ["chromatic_1", "chromatic_2", "chromatic_3", "chromatic_4", "chromatic_5"]:
-			ticks_per_second += 1
-	tick_timer.wait_time = 1.0 / ticks_per_second
-		
-	var grid_data = data["grid"]
-	for i in range(grid_data.size()):
-		if grid_data[i] == null:
-			reactor_grid[i] = null
-		else:
-			var entry = grid_data[i]
-			var def = BuildingDatabase.get_definition_by_type(entry["type"])
-			if def == null:
-				continue
-			var building = Building.new(def)
-			building.age = entry["age"]
-			building.is_ghost = entry.get("is_ghost", false)
-			building.current_heat = BigNumber.from_notation(entry["current_heat"]["m"], entry["current_heat"]["e"])
-			building.current_water = BigNumber.from_notation(entry["current_water"]["m"], entry["current_water"]["e"])
-			reactor_grid[i] = building
-	bonus_ticks = data.get("bonus_ticks", 0)
-	if data.has("timestamp"):
-		var elapsed_seconds = Time.get_unix_time_from_system() - data["timestamp"]
-		var offline_ticks = int(elapsed_seconds * ticks_per_second)
-		var max_ticks = 12 * 3600 * ticks_per_second  # 12h Cap
-		bonus_ticks += min(offline_ticks, max_ticks)
-	
-	if data.has("upgrades"):
-		for entry in data["upgrades"]:
-			for upgrade in upgrades:
+	GameState.ticks_per_second = data.get("ticks_per_second", 1)
+	tick_timer.wait_time = 1.0 / GameState.ticks_per_second
+	GameState.bonus_ticks = data.get("bonus_ticks", 0)
+
+	for map_data in data.get("maps", []):
+		var map = MapManager.get_map_by_id(map_data["id"])
+		if map == null:
+			map = MapManager.add_map(
+				map_data["id"],
+				map_data["display_name"],
+				map_data["grid_width"],
+				map_data["grid_height"],
+				map_data.get("terrain_id", "main")
+			)
+		map.stored_energy = BigNumber.from_notation(map_data["stored_energy"]["m"], map_data["stored_energy"]["e"])
+		map.max_storage = BigNumber.from_notation(map_data["max_storage"]["m"], map_data["max_storage"]["e"])
+		map.is_unlocked = map_data.get("is_unlocked", true)
+		if map_data.has("unlock_cost"):
+			map.unlock_cost = BigNumber.from_notation(map_data["unlock_cost"]["m"], map_data["unlock_cost"]["e"])
+
+		for entry in map_data.get("upgrades", []):
+			for upgrade in map.upgrades:
 				if upgrade.id == entry["id"]:
 					upgrade.current_level = entry["level"]
 					break
+
+		var grid_data = map_data["grid"]
+		for i in range(grid_data.size()):
+			if grid_data[i] == null:
+				map.reactor_grid[i] = null
+			else:
+				var entry = grid_data[i]
+				var def = BuildingDatabase.get_definition_by_type(entry["type"])
+				if def == null:
+					continue
+				var building = Building.new(def)
+				building.age = entry["age"]
+				building.is_ghost = entry.get("is_ghost", false)
+				building.current_heat = BigNumber.from_notation(entry["current_heat"]["m"], entry["current_heat"]["e"])
+				building.current_water = BigNumber.from_notation(entry["current_water"]["m"], entry["current_water"]["e"])
+				map.reactor_grid[i] = building
+
+	if data.has("active_map_index") and data["active_map_index"] < MapManager.maps.size():
+		MapManager.active_map_index = data["active_map_index"]
+
+	if data.has("timestamp"):
+		var elapsed_seconds = Time.get_unix_time_from_system() - data["timestamp"]
+		var offline_ticks = int(elapsed_seconds * GameState.ticks_per_second)
+		var max_ticks = 12 * 3600 * GameState.ticks_per_second  # 12h Cap
+		GameState.bonus_ticks += min(offline_ticks, max_ticks)
+
+	reactor_grid_container.columns = active_map().grid_width
+	build_grid()
+	await get_tree().process_frame
 	refresh_grid_visuals()
 	update_ui(get_total_energy_production(), get_effective_max_storage())
 
 
 func _on_pause_pressed() -> void:
-	is_paused = !is_paused
-	if is_paused:
+	GameState.is_paused = !GameState.is_paused
+	if GameState.is_paused:
 		tick_timer.stop()
 		pause_button.text = "Resume"
 	else:
 		tick_timer.start()
 		pause_button.text = "Pause"
-		if is_fast:
-			tick_timer.wait_time = 1.0 / (ticks_per_second * 3)
+		if GameState.is_fast:
+			tick_timer.wait_time = 1.0 / (GameState.ticks_per_second * 3)
 		else:
-			tick_timer.wait_time = 1.0 / ticks_per_second
+			tick_timer.wait_time = 1.0 / GameState.ticks_per_second
 
 
 func _on_fast_pressed() -> void:
-	if bonus_ticks <= 0:
+	if GameState.bonus_ticks <= 0:
 		return
-	bonus_ticks_running = !bonus_ticks_running
-	if bonus_ticks_running:
+	GameState.bonus_ticks_running = !GameState.bonus_ticks_running
+	if GameState.bonus_ticks_running:
 		$BonusTimer.start()
 		fast_button.add_theme_color_override("font_color", Color.GREEN)
 	else:
@@ -1155,28 +906,29 @@ func _on_fast_pressed() -> void:
 
 
 func _on_bonus_tick() -> void:
-	if bonus_ticks <= 0:
-		bonus_ticks = 0
+	if GameState.bonus_ticks <= 0:
+		GameState.bonus_ticks = 0
 		$BonusTimer.stop()
-		bonus_ticks_running = false
+		GameState.bonus_ticks_running = false
 		return
-	bonus_ticks -= 1
+	GameState.bonus_ticks -= 1
 	_on_tick_timer_timeout()
 	update_ui(get_total_energy_production(), get_effective_max_storage())
 
 
 func _on_auto_rebuild_pressed() -> void:
-	auto_rebuild_enabled = !auto_rebuild_enabled
-	if auto_rebuild_enabled:
+	GameState.auto_rebuild_enabled = !GameState.auto_rebuild_enabled
+	if GameState.auto_rebuild_enabled:
 		auto_rebuild_button.text = "AN"
 	else:
 		auto_rebuild_button.text = "AUS"
 
 
-func update_ui(total_production: BigNumber, effective_storage: BigNumber):
-	credits_label.text = "Credits: " + credits.to_display_string()
+func update_ui(total_production: BigNumber, effective_storage: BigNumber) -> void:
+	var map := active_map()
+	credits_label.text = "Credits: " + GameState.credits.to_display_string()
 	energy_label.text = "Energy/Tick: " + total_production.to_display_string()
-	stored_label.text = "Stored: " + stored_energy.to_display_string() + " / " + effective_storage.to_display_string()
-	stored_bar.value = stored_energy.divide(effective_storage).to_float() * 100
-	research_label.text = "Research Points: " + research_points.to_display_string()
-	bonus_tick_label.text = "Bonus Ticks: " + str(bonus_ticks)
+	stored_label.text = "Stored: " + map.stored_energy.to_display_string() + " / " + effective_storage.to_display_string()
+	stored_bar.value = map.stored_energy.divide(effective_storage).to_float() * 100
+	research_label.text = "Research Points: " + GameState.research_points.to_display_string()
+	bonus_tick_label.text = "Bonus Ticks: " + str(GameState.bonus_ticks)

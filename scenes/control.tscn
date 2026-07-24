@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://ptxdn8dr2et7"]
 
 [ext_resource type="Script" uid="uid://s8k8kon1r0pc" path="res://scripts/control.gd" id="1_5p55f"]
+[ext_resource type="Script" uid="uid://dkqgiutpotc1c" path="res://scripts/MapManager.gd" id="2_r67kn"]
 
 [node name="Control (root)" type="Control" unique_id=1273130803]
 custom_maximum_size = Vector2(0, 0)
@@ -180,6 +181,9 @@ columns = 3
 
 [node name="TickTimer" type="Timer" parent="." unique_id=609982531]
 autostart = true
+
+[node name="MapManager" type="Node" parent="." unique_id=1482973872]
+script = ExtResource("2_r67kn")
 
 [connection signal="pressed" from="MarginContainer/RootVbox/HeaderRow/StatsBox/VBoxContainer/Sell Energy" to="." method="_on_sell_energy_pressed"]
 [connection signal="timeout" from="TickTimer" to="." method="_on_tick_timer_timeout"]

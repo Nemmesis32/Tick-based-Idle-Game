@@ -277,6 +277,7 @@ static func create_water_pump() -> BuildingDefinition:
 	def.max_water = BigNumber.from_float(150000.0)
 	def.water_transfer_rate = 1.0
 	def.required_research = "water_pump"
+	def.requires_shore = true
 	def.tags = ["water_producer", "heat_immune"]
 	return def
 
