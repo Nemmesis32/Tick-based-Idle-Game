@@ -385,9 +385,9 @@ scenes/
 - [x] Forschungsbaum (~50 Nodes, Abhängigkeiten, Credits/RP-Logik, global über alle Maps)
 - [x] Gebäude durch Forschung freischalten (Gebäudeliste gefiltert)
 - [x] Savegames (JSON, Autosave 60s + beim Schließen, versioniert)
-- [ ] Upgrades filtern nach Forschungsstand (Feld existiert, Filter-Logik unklar/unvollständig)
+- [x] Upgrades filtern nach Forschungsstand 
 - [x] Ghost-Gebäude wenn Reaktoren auslaufen
-- [ ] Vollständige Visualisierung (Sprites statt Text bei Gebäuden)
+- [x] Vollständige Visualisierung bis Fusion_cell
 - [ ] Sound/Musik
 - [ ] Einstellungen
 - [x] Offline Progress (Bonus-Ticks, 12h-Cap, manuelles Fast-Forward-Abspielen)
